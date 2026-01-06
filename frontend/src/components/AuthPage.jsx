@@ -3,6 +3,7 @@ import VideoBackground from './VideoBackground'
 import RoleTabs from './RoleTabs'
 import AuthForm from './AuthForm'
 import AdminDashboard from './AdminDashboard'
+import apiService from '../services/api'
 import './AuthPage.css'
 
 const AuthPage = () => {
@@ -40,6 +41,16 @@ const AuthPage = () => {
       return
     }
 
+    // Only handle admin authentication (as per backend scope)
+    if (selectedRole !== 'admin') {
+      setStatusMessage({ 
+        text: 'Only admin authentication is currently supported', 
+        type: 'error' 
+      })
+      setIsLoading(false)
+      return
+    }
+
     // Additional validation for registration
     if (authMode === 'register') {
       if (!formData.name) {
@@ -51,18 +62,9 @@ const AuthPage = () => {
         return
       }
 
-      if (selectedRole === 'hospital' && (!formData.hospitalName || !formData.licenseNumber)) {
+      if (!formData.secretKey) {
         setStatusMessage({ 
-          text: 'Hospital name and license number are required', 
-          type: 'error' 
-        })
-        setIsLoading(false)
-        return
-      }
-
-      if (selectedRole === 'admin' && !formData.secretKey) {
-        setStatusMessage({ 
-          text: 'Admin secret key is required', 
+          text: 'Admin secret key is required for registration', 
           type: 'error' 
         })
         setIsLoading(false)
@@ -70,37 +72,35 @@ const AuthPage = () => {
       }
     }
 
-    // Simulate API call
+    // Call backend API
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      let response
       
-      // If admin login is successful, redirect to dashboard
-      if (selectedRole === 'admin' && authMode === 'login') {
-        setIsAdminLoggedIn(true)
-        setStatusMessage({ 
-          text: 'Login successful! Redirecting to Admin Dashboard...', 
-          type: 'success' 
-        })
-        return
+      if (authMode === 'login') {
+        response = await apiService.adminLogin(formData.email, formData.password)
+      } else {
+        response = await apiService.adminRegister(formData.email, formData.password, formData.name, formData.secretKey)
       }
       
-      // Mock success response
-      const action = authMode === 'login' ? 'Login' : 'Registration'
-      setStatusMessage({ 
-        text: `${action} successful for ${selectedRole}!`, 
-        type: 'success' 
-      })
-      
-      // Log form data for demo purposes
-      console.log('Form submitted:', { 
-        ...formData, 
-        role: selectedRole, 
-        action: authMode 
-      })
+      if (response.success) {
+        if (authMode === 'login') {
+          setIsAdminLoggedIn(true)
+          setStatusMessage({ 
+            text: 'Login successful! Redirecting to Admin Dashboard...', 
+            type: 'success' 
+          })
+        } else {
+          setStatusMessage({ 
+            text: 'Registration successful! You can now login.', 
+            type: 'success' 
+          })
+          setAuthMode('login')
+        }
+      }
       
     } catch (error) {
       setStatusMessage({ 
-        text: 'An error occurred. Please try again.', 
+        text: error.message || 'An error occurred. Please try again.', 
         type: 'error' 
       })
     } finally {
@@ -120,6 +120,7 @@ const AuthPage = () => {
 
   // Handle logout from admin dashboard
   const handleAdminLogout = () => {
+    apiService.logout()
     setIsAdminLoggedIn(false)
     setSelectedRole('user')
     setAuthMode('login')

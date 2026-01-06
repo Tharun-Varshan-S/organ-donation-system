@@ -1,27 +1,116 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Home, Building2, Heart, AlertCircle, Repeat2, BarChart3, Settings, LogOut,
   Search, Bell, User, ChevronDown, Edit2, Check, X, Eye
 } from 'lucide-react'
 import { OrgDemandBar, HospitalPie, MonthlyLine } from './Charts'
+import apiService from '../services/api'
 import './AdminDashboard.css'
 
 const AdminDashboard = ({ onLogout }) => {
   const [currentPage, setCurrentPage] = useState('dashboard')
-  const [hospitalData, setHospitalData] = useState([
-    { id: 1, name: 'City Medical Center', location: 'Downtown', beds: 500, status: 'approved', updated: '2024-01-05' },
-    { id: 2, name: 'Regional Hospital', location: 'North District', beds: 350, status: 'approved', updated: '2024-01-04' },
-    { id: 3, name: 'Riverside Healthcare', location: 'West Side', beds: 280, status: 'pending', updated: '2024-01-06' },
-    { id: 4, name: 'Central Clinic', location: 'Mid-town', beds: 150, status: 'approved', updated: '2024-01-03' },
-    { id: 5, name: 'Emergency Plus', location: 'East End', beds: 200, status: 'suspended', updated: '2024-01-02' }
-  ])
+  const [dashboardStats, setDashboardStats] = useState({})
+  const [hospitalData, setHospitalData] = useState([])
+  const [donorData, setDonorData] = useState([])
+  const [requestData, setRequestData] = useState([])
+  const [transplantData, setTransplantData] = useState([])
   const [showHospitalMenu, setShowHospitalMenu] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const updateHospitalStatus = (id, newStatus) => {
-    setHospitalData(hospitalData.map(h => 
-      h.id === id ? { ...h, status: newStatus, updated: new Date().toISOString().split('T')[0] } : h
-    ))
-    setShowHospitalMenu(null)
+  // Load dashboard data on mount
+  useEffect(() => {
+    loadDashboardData()
+  }, [])
+
+  // Load data based on current page
+  useEffect(() => {
+    switch (currentPage) {
+      case 'hospitals':
+        loadHospitals()
+        break
+      case 'donors':
+        loadDonors()
+        break
+      case 'requests':
+        loadRequests()
+        break
+      case 'transplants':
+        loadTransplants()
+        break
+    }
+  }, [currentPage])
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true)
+      const stats = await apiService.getDashboardStats()
+      setDashboardStats(stats.data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadHospitals = async () => {
+    try {
+      setLoading(true)
+      const response = await apiService.getHospitals()
+      setHospitalData(response.data.hospitals)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadDonors = async () => {
+    try {
+      setLoading(true)
+      const response = await apiService.getDonors()
+      setDonorData(response.data.donors)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadRequests = async () => {
+    try {
+      setLoading(true)
+      const response = await apiService.getRequests()
+      setRequestData(response.data.requests)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadTransplants = async () => {
+    try {
+      setLoading(true)
+      const response = await apiService.getTransplants()
+      setTransplantData(response.data.transplants)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateHospitalStatus = async (id, newStatus) => {
+    try {
+      await apiService.updateHospitalStatus(id, newStatus)
+      setHospitalData(hospitalData.map(h => 
+        h._id === id ? { ...h, status: newStatus, updatedAt: new Date().toISOString() } : h
+      ))
+      setShowHospitalMenu(null)
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   const StatCard = ({ icon: Icon, label, value, bgColor }) => (
@@ -38,67 +127,67 @@ const AdminDashboard = ({ onLogout }) => {
 
   const renderDashboard = () => (
     <div className="dashboard-content">
+      {error && <div className="error-message">{error}</div>}
+      {loading && <div className="loading-message">Loading...</div>}
+      
       {/* Stats Grid */}
       <div className="stats-grid">
-        <StatCard icon={Building2} label="Total Hospitals" value="125" bgColor="#3b82f6" />
-        <StatCard icon={Heart} label="Active Donors" value="3,240" bgColor="#10b981" />
-        <StatCard icon={AlertCircle} label="Pending Requests" value="18" bgColor="#f59e0b" />
-        <StatCard icon={Repeat2} label="Successful Transplants" value="542" bgColor="#8b5cf6" />
-        <StatCard icon={User} label="Registered Users" value="8,920" bgColor="#06b6d4" />
-        <StatCard icon={BarChart3} label="This Month" value="47" bgColor="#ec4899" />
+        <StatCard icon={Building2} label="Total Hospitals" value={dashboardStats.totalHospitals || '0'} bgColor="#3b82f6" />
+        <StatCard icon={Heart} label="Active Donors" value={dashboardStats.totalDonors || '0'} bgColor="#10b981" />
+        <StatCard icon={AlertCircle} label="Pending Requests" value={dashboardStats.totalRequests || '0'} bgColor="#f59e0b" />
+        <StatCard icon={Repeat2} label="Successful Transplants" value={dashboardStats.totalTransplants || '0'} bgColor="#8b5cf6" />
+        <StatCard icon={User} label="Approved Hospitals" value={dashboardStats.approvedHospitals || '0'} bgColor="#06b6d4" />
+        <StatCard icon={BarChart3} label="Pending Hospitals" value={dashboardStats.pendingHospitals || '0'} bgColor="#ec4899" />
       </div>
 
       {/* Hospital Management Table */}
       <div className="section">
-        <h2 className="section-title">Hospital Management</h2>
+        <h2 className="section-title">Recent Hospitals</h2>
         <div className="table-wrapper">
           <table className="admin-table">
             <thead>
               <tr>
                 <th>Hospital Name</th>
                 <th>Location</th>
-                <th>Beds</th>
+                <th>Contact</th>
                 <th>Status</th>
                 <th>Last Updated</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {hospitalData.map(hospital => (
-                <tr key={hospital.id}>
+              {hospitalData.slice(0, 5).map(hospital => (
+                <tr key={hospital._id}>
                   <td className="hospital-name">{hospital.name}</td>
-                  <td>{hospital.location}</td>
-                  <td>{hospital.beds}</td>
+                  <td>{hospital.address}</td>
+                  <td>{hospital.contactEmail}</td>
                   <td>
                     <span className={`status-badge status-${hospital.status}`}>
                       {hospital.status.charAt(0).toUpperCase() + hospital.status.slice(1)}
                     </span>
                   </td>
-                  <td>{hospital.updated}</td>
+                  <td>{new Date(hospital.updatedAt).toLocaleDateString()}</td>
                   <td className="action-cell">
                     <div className="action-dropdown">
                       <button 
                         className="action-btn"
-                        onClick={() => setShowHospitalMenu(showHospitalMenu === hospital.id ? null : hospital.id)}
+                        onClick={() => setShowHospitalMenu(showHospitalMenu === hospital._id ? null : hospital._id)}
                       >
                         <ChevronDown size={16} />
                       </button>
-                      {showHospitalMenu === hospital.id && (
+                      {showHospitalMenu === hospital._id && (
                         <div className="dropdown-menu">
                           <button 
                             className="dropdown-item approve"
-                            onClick={() => updateHospitalStatus(hospital.id, 'approved')}
+                            onClick={() => updateHospitalStatus(hospital._id, 'approved')}
                           >
                             <Check size={14} /> Approve
                           </button>
                           <button 
                             className="dropdown-item reject"
-                            onClick={() => updateHospitalStatus(hospital.id, 'suspended')}
+                            onClick={() => updateHospitalStatus(hospital._id, 'suspended')}
                           >
                             <X size={14} /> Suspend
-                          </button>
-                          <button className="dropdown-item edit">
-                            <Edit2 size={14} /> Edit
                           </button>
                           <button className="dropdown-item view">
                             <Eye size={14} /> View
@@ -118,6 +207,9 @@ const AdminDashboard = ({ onLogout }) => {
 
   const renderHospitals = () => (
     <div className="dashboard-content">
+      {error && <div className="error-message">{error}</div>}
+      {loading && <div className="loading-message">Loading...</div>}
+      
       <h2 className="section-title">All Hospitals</h2>
       <div className="table-wrapper">
         <table className="admin-table">
@@ -125,7 +217,7 @@ const AdminDashboard = ({ onLogout }) => {
             <tr>
               <th>Hospital Name</th>
               <th>Location</th>
-              <th>Beds</th>
+              <th>Contact</th>
               <th>Status</th>
               <th>Last Updated</th>
               <th>Actions</th>
@@ -133,40 +225,37 @@ const AdminDashboard = ({ onLogout }) => {
           </thead>
           <tbody>
             {hospitalData.map(hospital => (
-              <tr key={hospital.id}>
+              <tr key={hospital._id}>
                 <td className="hospital-name">{hospital.name}</td>
-                <td>{hospital.location}</td>
-                <td>{hospital.beds}</td>
+                <td>{hospital.address}</td>
+                <td>{hospital.contactEmail}</td>
                 <td>
                   <span className={`status-badge status-${hospital.status}`}>
                     {hospital.status.charAt(0).toUpperCase() + hospital.status.slice(1)}
                   </span>
                 </td>
-                <td>{hospital.updated}</td>
+                <td>{new Date(hospital.updatedAt).toLocaleDateString()}</td>
                 <td className="action-cell">
                   <div className="action-dropdown">
                     <button 
                       className="action-btn"
-                      onClick={() => setShowHospitalMenu(showHospitalMenu === hospital.id ? null : hospital.id)}
+                      onClick={() => setShowHospitalMenu(showHospitalMenu === hospital._id ? null : hospital._id)}
                     >
                       <ChevronDown size={16} />
                     </button>
-                    {showHospitalMenu === hospital.id && (
+                    {showHospitalMenu === hospital._id && (
                       <div className="dropdown-menu">
                         <button 
                           className="dropdown-item approve"
-                          onClick={() => updateHospitalStatus(hospital.id, 'approved')}
+                          onClick={() => updateHospitalStatus(hospital._id, 'approved')}
                         >
                           <Check size={14} /> Approve
                         </button>
                         <button 
                           className="dropdown-item reject"
-                          onClick={() => updateHospitalStatus(hospital.id, 'suspended')}
+                          onClick={() => updateHospitalStatus(hospital._id, 'suspended')}
                         >
                           <X size={14} /> Suspend
-                        </button>
-                        <button className="dropdown-item edit">
-                          <Edit2 size={14} /> Edit
                         </button>
                         <button className="dropdown-item view">
                           <Eye size={14} /> View
@@ -185,18 +274,21 @@ const AdminDashboard = ({ onLogout }) => {
 
   const renderDonors = () => (
     <div className="dashboard-content">
+      {error && <div className="error-message">{error}</div>}
+      {loading && <div className="loading-message">Loading...</div>}
+      
       <h2 className="section-title">Registered Donors</h2>
       <div className="donor-summary">
         <div className="donor-card">
-          <div className="donor-count">3,240</div>
+          <div className="donor-count">{dashboardStats.totalDonors || '0'}</div>
+          <div className="donor-label">Total Donors</div>
+        </div>
+        <div className="donor-card">
+          <div className="donor-count">{donorData.filter(d => d.status === 'active').length}</div>
           <div className="donor-label">Active Donors</div>
         </div>
         <div className="donor-card">
-          <div className="donor-count">547</div>
-          <div className="donor-label">Pending Verification</div>
-        </div>
-        <div className="donor-card">
-          <div className="donor-count">892</div>
+          <div className="donor-count">{donorData.filter(d => d.donorType === 'deceased').length}</div>
           <div className="donor-label">Deceased Donors</div>
         </div>
       </div>
@@ -212,27 +304,15 @@ const AdminDashboard = ({ onLogout }) => {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>John Doe</td>
-              <td>O+</td>
-              <td>New York</td>
-              <td>Heart, Kidney, Liver</td>
-              <td><span className="status-badge status-approved">Active</span></td>
-            </tr>
-            <tr>
-              <td>Jane Smith</td>
-              <td>AB+</td>
-              <td>Los Angeles</td>
-              <td>Kidney, Pancreas</td>
-              <td><span className="status-badge status-approved">Active</span></td>
-            </tr>
-            <tr>
-              <td>Robert Johnson</td>
-              <td>B+</td>
-              <td>Chicago</td>
-              <td>Heart, Lung</td>
-              <td><span className="status-badge status-pending">Pending</span></td>
-            </tr>
+            {donorData.map(donor => (
+              <tr key={donor._id}>
+                <td>{donor.name}</td>
+                <td>{donor.bloodType}</td>
+                <td>{donor.address}</td>
+                <td>{donor.organsAvailable?.join(', ') || 'N/A'}</td>
+                <td><span className={`status-badge status-${donor.status}`}>{donor.status}</span></td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -241,6 +321,9 @@ const AdminDashboard = ({ onLogout }) => {
 
   const renderOrganRequests = () => (
     <div className="dashboard-content">
+      {error && <div className="error-message">{error}</div>}
+      {loading && <div className="loading-message">Loading...</div>}
+      
       <h2 className="section-title">Organ Requests</h2>
       <div className="table-wrapper">
         <table className="admin-table">
@@ -255,30 +338,16 @@ const AdminDashboard = ({ onLogout }) => {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>#ORG-2024-001</td>
-              <td>City Medical Center</td>
-              <td>Heart</td>
-              <td>O+</td>
-              <td><span className="urgency-badge emergency">Emergency</span></td>
-              <td>2024-01-05</td>
-            </tr>
-            <tr>
-              <td>#ORG-2024-002</td>
-              <td>Regional Hospital</td>
-              <td>Kidney</td>
-              <td>AB+</td>
-              <td><span className="urgency-badge routine">Routine</span></td>
-              <td>2024-01-04</td>
-            </tr>
-            <tr>
-              <td>#ORG-2024-003</td>
-              <td>Riverside Healthcare</td>
-              <td>Liver</td>
-              <td>B+</td>
-              <td><span className="urgency-badge emergency">Emergency</span></td>
-              <td>2024-01-06</td>
-            </tr>
+            {requestData.map(request => (
+              <tr key={request._id}>
+                <td>#{request._id.slice(-8)}</td>
+                <td>{request.hospitalId?.name || 'N/A'}</td>
+                <td>{request.organType}</td>
+                <td>{request.bloodType}</td>
+                <td><span className={`urgency-badge ${request.urgency}`}>{request.urgency}</span></td>
+                <td>{new Date(request.createdAt).toLocaleDateString()}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

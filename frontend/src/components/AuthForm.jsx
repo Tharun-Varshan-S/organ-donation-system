@@ -154,7 +154,7 @@ const AuthForm = ({
               </div>
             )}
 
-            {/* Admin Secret Key */}
+            {/* Admin Secret Key - Only for Registration */}
             {selectedRole === 'admin' && (
               <div className="input-group">
                 <label htmlFor="secretKey">Secret Key</label>
