@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import VideoBackground from './VideoBackground'
 import RoleTabs from './RoleTabs'
 import AuthForm from './AuthForm'
+import AdminDashboard from './AdminDashboard'
 import './AuthPage.css'
 
 const AuthPage = () => {
@@ -10,6 +11,7 @@ const AuthPage = () => {
   const [authMode, setAuthMode] = useState('login') // 'login' or 'register'
   const [statusMessage, setStatusMessage] = useState({ text: '', type: '' })
   const [isLoading, setIsLoading] = useState(false)
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false)
 
   // Handle role change with animation
   const handleRoleChange = (roleKey) => {
@@ -72,6 +74,16 @@ const AuthPage = () => {
     try {
       await new Promise(resolve => setTimeout(resolve, 1500))
       
+      // If admin login is successful, redirect to dashboard
+      if (selectedRole === 'admin' && authMode === 'login') {
+        setIsAdminLoggedIn(true)
+        setStatusMessage({ 
+          text: 'Login successful! Redirecting to Admin Dashboard...', 
+          type: 'success' 
+        })
+        return
+      }
+      
       // Mock success response
       const action = authMode === 'login' ? 'Login' : 'Registration'
       setStatusMessage({ 
@@ -105,6 +117,19 @@ const AuthPage = () => {
       return () => clearTimeout(timer)
     }
   }, [statusMessage])
+
+  // Handle logout from admin dashboard
+  const handleAdminLogout = () => {
+    setIsAdminLoggedIn(false)
+    setSelectedRole('user')
+    setAuthMode('login')
+    setStatusMessage({ text: '', type: '' })
+  }
+
+  // If admin is logged in, show the dashboard
+  if (isAdminLoggedIn) {
+    return <AdminDashboard onLogout={handleAdminLogout} />
+  }
 
   return (
     <>
