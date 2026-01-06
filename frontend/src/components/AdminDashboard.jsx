@@ -378,7 +378,7 @@ const AdminDashboard = ({ onLogout }) => {
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-header">
-          <h1>Blood Bank</h1>
+          <h1>ORGAN DONATION SYSTEM</h1>
         </div>
         <nav className="sidebar-nav">
           <button
