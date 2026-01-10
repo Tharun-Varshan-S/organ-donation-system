@@ -4,8 +4,10 @@ import Modal from '../components/Modal';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import Select from '../components/Select';
+import { useNavigate } from 'react-router-dom';
 
-const Register = ({ onBack }) => {
+const Register = () => {
+  const navigate = useNavigate();
   const { register, loading } = useAuth();
   const [formData, setFormData] = useState({
     role: 'donor',
@@ -20,9 +22,13 @@ const Register = ({ onBack }) => {
     organ: ''
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    register(formData);
+    const success = await register(formData);
+    if (success) {
+      if (formData.role === 'donor') navigate('/donor-dashboard');
+      else navigate('/hospital-dashboard');
+    }
   };
 
   const roleOptions = [
@@ -51,8 +57,12 @@ const Register = ({ onBack }) => {
     { value: 'pancreas', label: 'Pancreas' }
   ];
 
+  const handleBack = () => {
+    navigate('/login');
+  };
+
   return (
-    <Modal isOpen={true} onClose={onBack} title="Create Account" size="sm">
+    <Modal isOpen={true} onClose={handleBack} title="Create Account" size="sm">
       <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
         <Select
           label="Register as"

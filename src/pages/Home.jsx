@@ -1,19 +1,20 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Heart, Users, Activity, Building2, Shield } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AnimatedBackground from '../components/AnimatedBackground';
 import Button from '../components/Button';
 import Card from '../components/Card';
-import Login from './Login';
+
 import DonorDashboard from './DonorDashboard';
 import HospitalDashboard from './HospitalDashboard';
 import AdminDashboard from './AdminDashboard';
 
 const Home = () => {
   const { user } = useAuth();
-  const [currentPage, setCurrentPage] = useState('home');
+  const navigate = useNavigate();
 
   if (user) {
     if (user.role === 'donor') return <DonorDashboard />;
@@ -25,7 +26,7 @@ const Home = () => {
     <div className="min-h-screen bg-gradient-to-br from-[#D4E8E8] via-[#A2BFC6] to-[#798E93] relative">
       <AnimatedBackground />
 
-      <Navbar showPortalButton onPortalClick={() => setCurrentPage('login')} />
+      <Navbar showPortalButton />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
         {/* Hero Card */}
@@ -67,7 +68,7 @@ const Home = () => {
 
             <Button
               variant="white"
-              onClick={() => setCurrentPage('login')}
+              onClick={() => navigate('/login')}
               className="text-lg px-8 py-4 rounded-full inline-flex items-center space-x-2"
             >
               <span className="font-bold">JOIN AS DONOR</span>
@@ -153,8 +154,6 @@ const Home = () => {
       </div>
 
       <Footer />
-
-      {currentPage === 'login' && <Login onBack={() => setCurrentPage('home')} />}
     </div>
   );
 };

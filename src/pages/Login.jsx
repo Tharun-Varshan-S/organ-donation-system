@@ -1,25 +1,30 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Modal from '../components/Modal';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import Select from '../components/Select';
-import Register from './Register';
 
-const Login = ({ onBack }) => {
+const Login = () => {
+  const navigate = useNavigate();
   const { login, loading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('donor');
-  const [showRegister, setShowRegister] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    login(email, password, role);
+    const success = await login(email, password, role);
+    if (success) {
+      if (role === 'donor') navigate('/donor-dashboard');
+      else if (role === 'hospital') navigate('/hospital-dashboard');
+      else if (role === 'admin') navigate('/admin-dashboard');
+    }
   };
 
-  if (showRegister) {
-    return <Register onBack={() => setShowRegister(false)} />;
+  const handleBack = () => {
+    navigate('/');
   }
 
   const roleOptions = [
@@ -29,7 +34,7 @@ const Login = ({ onBack }) => {
   ];
 
   return (
-    <Modal isOpen={true} onClose={onBack} title="Welcome Back" size="sm">
+    <Modal isOpen={true} onClose={handleBack} title="Welcome Back" size="sm">
       <form onSubmit={handleSubmit} className="space-y-4">
         <Select
           label="Role"
@@ -60,7 +65,7 @@ const Login = ({ onBack }) => {
       <p className="text-[#556B73] text-center mt-6">
         Don't have an account?{' '}
         <button
-          onClick={() => setShowRegister(true)}
+          onClick={() => navigate('/register')}
           className="text-red-600 hover:text-red-700 font-semibold"
         >
           Register

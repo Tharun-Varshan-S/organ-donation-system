@@ -51,7 +51,11 @@ const Navbar = ({ showPortalButton = false, onPortalClick, user, onLogout }) => 
           <div className="flex items-center space-x-4">
             {user && <span className="text-white">Welcome, {user.name}</span>}
             {showPortalButton ? (
-              <Button variant="primary" onClick={onPortalClick} className="px-6 py-2">
+              <Button
+                variant="primary"
+                onClick={onPortalClick || (() => navigate('/login'))}
+                className="px-6 py-2"
+              >
                 Portal
               </Button>
             ) : (
