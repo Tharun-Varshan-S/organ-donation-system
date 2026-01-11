@@ -1,0 +1,65 @@
+/* Layout Components */
+.login-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: var(--spacing-md);
+    position: relative;
+    z-index: 1;
+}
+
+.login-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    width: 100%;
+    max-width: 420px;
+    box-shadow: var(--card-shadow);
+    transition: transform var(--transition-slow), 
+                box-shadow var(--transition-slow);
+    position: relative;
+    overflow: hidden;
+}
+
+.login-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.05) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+    );
+    z-index: -1;
+    pointer-events: none;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 480px) {
+    .login-card {
+        padding: var(--spacing-lg);
+        margin: 0 var(--spacing-md);
+    }
+}
+
+/* Print Styles */
+@media print {
+    .login-wrapper {
+        padding: 0;
+    }
+    
+    .login-card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+        max-width: 100%;
+        margin: 0;
+        padding: 1cm;
+    }
+}
