@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
+const Hospital = require('../models/Hospital');
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -33,7 +34,7 @@ const adminRegister = async (req, res) => {
 
     // Check if admin already exists
     const existingAdmin = await Admin.findOne({ email });
-    
+
     if (existingAdmin) {
       return res.status(400).json({
         success: false,
@@ -67,7 +68,7 @@ const adminRegister = async (req, res) => {
 
   } catch (error) {
     console.error('Admin registration error:', error);
-    
+
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -99,7 +100,7 @@ const adminLogin = async (req, res) => {
 
     // Check if admin exists
     const admin = await Admin.findOne({ email }).select('+password');
-    
+
     if (!admin) {
       return res.status(401).json({
         success: false,
@@ -117,7 +118,7 @@ const adminLogin = async (req, res) => {
 
     // Check password
     const isPasswordMatch = await admin.comparePassword(password);
-    
+
     if (!isPasswordMatch) {
       return res.status(401).json({
         success: false,
@@ -160,7 +161,7 @@ const adminLogin = async (req, res) => {
 const getAdminProfile = async (req, res) => {
   try {
     const admin = await Admin.findById(req.admin.id).select('-password');
-    
+
     res.status(200).json({
       success: true,
       data: admin
@@ -174,8 +175,239 @@ const getAdminProfile = async (req, res) => {
   }
 };
 
+// @desc    Hospital registration
+// @route   POST /api/hospitals/register
+// @access  Public
+const hospitalRegister = async (req, res) => {
+  try {
+    const {
+      name, email, password, licenseNumber,
+      address, city, state, zipCode,
+      phone, emergencyPhone,
+      specializations
+    } = req.body;
+
+    // Validation checks...
+
+    // Check if hospital already exists
+    const existingHospital = await Hospital.findOne({
+      $or: [{ email }, { licenseNumber }]
+    });
+
+    if (existingHospital) {
+      return res.status(400).json({
+        success: false,
+        message: 'Hospital with this email or license already exists'
+      });
+    }
+
+    // Create hospital - Status defaults to 'pending' as per schema
+    const hospital = await Hospital.create({
+      name,
+      email,
+      password,
+      licenseNumber,
+      location: {
+        address,
+        city,
+        state,
+        zipCode
+      },
+      contactInfo: {
+        phone,
+        emergencyPhone
+      },
+      specializations: specializations || [],
+      status: 'pending', // Explicitly enforced
+      isActive: false    // Explicitly enforced
+    });
+
+    // We do NOT return a token for pending hospitals.
+    // They must wait for approval.
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful. Waiting for admin approval.',
+      data: {
+        id: hospital._id,
+        name: hospital.name,
+        email: hospital.email,
+        status: hospital.status
+      }
+    });
+
+  } catch (error) {
+    console.error('Hospital registration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during registration'
+    });
+  }
+};
+
+// @desc    Hospital login
+// @route   POST /api/hospitals/login
+// @access  Public
+const hospitalLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide email and password'
+      });
+    }
+
+    // Check if hospital exists
+    const hospital = await Hospital.findOne({ email }).select('+password');
+
+    // STRICT: IF NOT FOUND -> "Account does not exist" (Generic 401)
+    if (!hospital) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    // Check password
+    const isPasswordMatch = await hospital.comparePassword(password);
+    if (!isPasswordMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    // STRICT STATUS CHECKS
+
+    // PENDING -> "Waiting for Admin Approval"
+    if (hospital.status === 'pending') {
+      return res.status(403).json({
+        success: false,
+        message: 'Account is pending admin approval. Please wait.'
+      });
+    }
+
+    // REJECTED -> Should not happen if filtered by findOne (if we deleted them), 
+    // but if we had soft deletes or if schema was loose, we block here too.
+    // Since we delete rejected, this block might be redundant but safe.
+    if (hospital.status === 'rejected') {
+      return res.status(403).json({ // Or 401 to feign non-existence
+        success: false,
+        message: 'Registration rejected.'
+      });
+    }
+
+    // ONLY APPROVED ALLOWED
+    if (hospital.status !== 'approved') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied.'
+      });
+    }
+
+    // Generate token
+    const token = generateToken(hospital._id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      token,
+      data: {
+        id: hospital._id,
+        name: hospital.name,
+        email: hospital.email,
+        status: hospital.status,
+        role: 'hospital'
+      }
+    });
+
+  } catch (error) {
+    console.error('Hospital login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
+
+// @desc    Get all APPROVED hospitals (Public)
+// @route   GET /api/hospitals
+// @access  Public
+const getPublicHospitals = async (req, res) => {
+  try {
+    const { search, state, specialization } = req.query;
+
+    let query = { status: 'approved' }; // STRICTLY APPROVED ONLY
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { 'location.city': { $regex: search, $options: 'i' } },
+        { 'location.state': { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    if (state) query['location.state'] = state;
+    if (specialization) query.specializations = specialization;
+
+    const hospitals = await Hospital.find(query)
+      .select('-password -licenseNumber -approvedBy -approvedAt -createdAt -updatedAt -__v') // Hide internal fields
+      .sort({ name: 1 });
+
+    res.status(200).json({
+      success: true,
+      count: hospitals.length,
+      data: hospitals
+    });
+
+  } catch (error) {
+    console.error('Get public hospitals error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching hospitals'
+    });
+  }
+};
+
+// @desc    Get single hospital details (Public)
+// @route   GET /api/hospitals/:id
+// @access  Public
+const getPublicHospitalById = async (req, res) => {
+  try {
+    const hospital = await Hospital.findOne({
+      _id: req.params.id,
+      status: 'approved' // STRICTLY APPROVED ONLY
+    }).select('-password -licenseNumber -approvedBy -approvedAt');
+
+    if (!hospital) {
+      return res.status(404).json({
+        success: false,
+        message: 'Hospital not found or not approved'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: hospital
+    });
+
+  } catch (error) {
+    console.error('Get hospital details error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching hospital details'
+    });
+  }
+};
+
 module.exports = {
   adminRegister,
   adminLogin,
-  getAdminProfile
+  getAdminProfile,
+  hospitalRegister,
+  hospitalLogin,
+  getPublicHospitals,
+  getPublicHospitalById
 };

@@ -3,29 +3,29 @@ const mongoose = require('mongoose');
 const hospitalSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'Hospital name is required'],
-    trim: true
+    required: true
   },
   email: {
     type: String,
-    required: [true, 'Email is required'],
+    required: true,
     unique: true,
     lowercase: true
   },
+  password: {
+    type: String,
+    required: true,
+    minlength: 6
+  },
   licenseNumber: {
     type: String,
-    required: [true, 'License number is required'],
+    required: true,
     unique: true
   },
   location: {
     address: String,
     city: String,
     state: String,
-    zipCode: String,
-    coordinates: {
-      latitude: Number,
-      longitude: Number
-    }
+    zipCode: String
   },
   contactInfo: {
     phone: String,
@@ -33,18 +33,14 @@ const hospitalSchema = new mongoose.Schema({
   },
   capacity: {
     totalBeds: { type: Number, default: 0 },
-    availableBeds: { type: Number, default: 0 }
+    icuBeds: { type: Number, default: 0 }
   },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'suspended', 'rejected'],
+    enum: ['pending', 'approved'],
     default: 'pending'
   },
   specializations: [String],
-  isActive: {
-    type: Boolean,
-    default: true
-  },
   approvedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Admin'

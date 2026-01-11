@@ -1,0 +1,250 @@
+.hospital-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.hospital-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* IMAGE CONTAINER */
+.card-image-container {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    overflow: hidden;
+    background: #f0f0f0;
+}
+
+.card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.hospital-card:hover .card-image {
+    transform: scale(1.05);
+}
+
+/* BADGE - TOP RIGHT */
+.card-badge-top-right {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+}
+
+.badge-top {
+    display: inline-block;
+    background: rgba(34, 197, 94, 0.95);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(8px);
+}
+
+/* TITLE + CAPACITY TAG (SAME LINE) */
+.card-title-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 16px 8px;
+    gap: 12px;
+}
+
+.card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    flex: 1;
+    line-height: 1.3;
+}
+
+.capacity-tag {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* LOCATION */
+.card-location {
+    padding: 0 16px 4px;
+    font-size: 0.85rem;
+    color: #556B73;
+    font-weight: 500;
+}
+
+.card-address {
+    padding: 0 16px 12px;
+    font-size: 0.8rem;
+    color: #798E93;
+}
+
+/* TWO-COLUMN INFRASTRUCTURE */
+.card-infrastructure {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    padding: 12px 16px;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.infra-left,
+.infra-right {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.infra-item {
+    font-size: 0.8rem;
+    color: #475569;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+/* CHECKMARK SPECIALIZATIONS */
+.card-specializations {
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.spec-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: #16a34a;
+    font-weight: 500;
+}
+
+.spec-item.more {
+    color: #798E93;
+    font-style: italic;
+}
+
+.check-icon {
+    color: #22c55e;
+    flex-shrink: 0;
+}
+
+/* TRUST INFO */
+.card-trust-info {
+    padding: 12px 16px;
+    background: #f8fafc;
+    font-size: 0.75rem;
+    color: #556B73;
+    line-height: 1.5;
+}
+
+.card-trust-info p {
+    margin: 2px 0;
+}
+
+/* VIEW BUTTON */
+.view-hospital-btn {
+    margin: 12px 16px 16px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.view-hospital-btn:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.view-hospital-btn:active {
+    transform: translateY(0);
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .card-image-container {
+        height: 180px;
+    }
+
+    .card-title {
+        font-size: 1rem;
+    }
+
+    .card-infrastructure {
+        grid-template-columns: 1fr;
+    }
+
+    .infra-right {
+        padding-top: 8px;
+        border-top: 1px solid #e2e8f0;
+        margin-top: 8px;
+    }
+}
+
+
+.spec-more {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    align-self: center;
+}
+
+.card-stats {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 12px;
+    margin-top: auto;
+    border-top: 1px solid #e2e8f0;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #475569;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.view-btn {
+    margin-top: 16px;
+    width: 100%;
+    padding: 12px;
+    background: #0f172a;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.view-btn:hover {
+    background: #1e293b;
+}

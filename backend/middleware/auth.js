@@ -1,77 +1,49 @@
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
+const Hospital = require('../models/Hospital');
 
-// Protect routes - verify JWT token
-const protect = async (req, res, next) => {
+// Admin authentication
+const adminAuth = async (req, res, next) => {
   try {
-    let token;
-
-    // Check for token in headers
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
-    }
-
+    const token = req.header('Authorization')?.replace('Bearer ', '');
     if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Access denied. No token provided.'
-      });
+      return res.status(401).json({ message: 'Access denied' });
     }
 
-    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Get admin from token
-    const admin = await Admin.findById(decoded.id).select('-password');
+    const admin = await Admin.findById(decoded.id);
     
     if (!admin) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token is not valid. Admin not found.'
-      });
-    }
-
-    if (!admin.isActive) {
-      return res.status(401).json({
-        success: false,
-        message: 'Admin account is deactivated.'
-      });
+      return res.status(401).json({ message: 'Invalid token' });
     }
 
     req.admin = admin;
     next();
   } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token.'
-      });
+    res.status(401).json({ message: 'Invalid token' });
+  }
+};
+
+// Hospital authentication
+const hospitalAuth = async (req, res, next) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ message: 'Access denied' });
     }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const hospital = await Hospital.findById(decoded.id);
     
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Token expired.'
-      });
+    if (!hospital || hospital.status !== 'approved') {
+      return res.status(401).json({ message: 'Invalid token or not approved' });
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Server error during authentication.'
-    });
-  }
-};
-
-// Admin only access
-const adminOnly = (req, res, next) => {
-  if (req.admin && req.admin.role === 'admin') {
+    req.hospital = hospital;
     next();
-  } else {
-    res.status(403).json({
-      success: false,
-      message: 'Access denied. Admin privileges required.'
-    });
+  } catch (error) {
+    res.status(401).json({ message: 'Invalid token' });
   }
 };
 
-module.exports = { protect, adminOnly };
+module.exports = { adminAuth, hospitalAuth };
