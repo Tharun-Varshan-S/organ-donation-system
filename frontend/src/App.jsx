@@ -6,6 +6,9 @@ import Mission from './landing/pages/Mission';
 import About from './landing/pages/About';
 import Contact from './landing/pages/Contact';
 import AuthPage from './components/AuthPage';
+import HospitalDashboard from './landing/pages/HospitalDashboard';
+import HospitalOverview from './landing/pages/HospitalOverview';
+import HospitalList from './pages/HospitalList';
 import './App.css';
 
 function App() {
@@ -22,6 +25,13 @@ function App() {
 
             {/* Authenticated Portal Routes */}
             <Route path="/login" element={<AuthPage />} />
+
+            {/* Hospital Dashboard Routes */}
+            <Route path="/hospitals" element={<HospitalDashboard />} />
+            <Route path="/hospitals/:hospitalId" element={<HospitalOverview />} />
+
+            {/* Legacy Hospital List Route (can be deprecated) */}
+            <Route path="/hospital-list" element={<HospitalList />} />
 
             {/* Catch-all - redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />

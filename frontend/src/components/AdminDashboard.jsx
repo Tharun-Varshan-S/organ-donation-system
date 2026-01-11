@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import {
   Home, Building2, Heart, AlertCircle, Repeat2, BarChart3, Settings, LogOut,
-  Search, Bell, User, ChevronDown, Edit2, Check, X, Eye
+  Search, Bell, User, ChevronDown, Edit2, Check, X, Eye,
+  Map, Stethoscope, Siren, Grid, Filter
 } from 'lucide-react'
 import { OrgDemandBar, HospitalPie, MonthlyLine } from './Charts'
 import apiService from '../services/api'
@@ -18,6 +19,22 @@ const AdminDashboard = ({ onLogout }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // Hospital Dashboard State
+  const [hospitalStats, setHospitalStats] = useState({
+    total: 0,
+    statusCounts: {},
+    regionStats: [],
+    specializationStats: [],
+    emergencyCount: 0
+  })
+  const [activeTab, setActiveTab] = useState('all') // all, region, specialization, emergency
+  const [filters, setFilters] = useState({
+    search: '',
+    state: '',
+    specialization: '',
+    status: ''
+  })
+
   // Load dashboard data on mount
   useEffect(() => {
     loadDashboardData()
@@ -28,6 +45,7 @@ const AdminDashboard = ({ onLogout }) => {
     switch (currentPage) {
       case 'hospitals':
         loadHospitals()
+        loadHospitalStats()
         break
       case 'donors':
         loadDonors()
@@ -40,6 +58,16 @@ const AdminDashboard = ({ onLogout }) => {
         break
     }
   }, [currentPage])
+
+  // Reload hospitals when filters or tab change (for 'all' and 'emergency' tabs)
+  useEffect(() => {
+    if (currentPage === 'hospitals') {
+      const isGridView = (activeTab === 'region' && !filters.state) || (activeTab === 'specialization' && !filters.specialization)
+      if (!isGridView) {
+        loadHospitals()
+      }
+    }
+  }, [filters, activeTab])
 
   const loadDashboardData = async () => {
     try {
@@ -56,12 +84,25 @@ const AdminDashboard = ({ onLogout }) => {
   const loadHospitals = async () => {
     try {
       setLoading(true)
-      const response = await apiService.getHospitals()
+      const queryFilters = {
+        ...filters,
+        emergency: activeTab === 'emergency'
+      }
+      const response = await apiService.getHospitals(queryFilters)
       setHospitalData(response.data.hospitals)
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadHospitalStats = async () => {
+    try {
+      const response = await apiService.getHospitalStats()
+      setHospitalStats(response.data)
+    } catch (err) {
+      console.error("Failed to load hospital stats", err)
     }
   }
 
@@ -101,12 +142,26 @@ const AdminDashboard = ({ onLogout }) => {
     }
   }
 
-  const updateHospitalStatus = async (id, newStatus) => {
+  const handleApprove = async (id) => {
     try {
-      await apiService.updateHospitalStatus(id, newStatus)
-      setHospitalData(hospitalData.map(h => 
-        h._id === id ? { ...h, status: newStatus, updatedAt: new Date().toISOString() } : h
+      await apiService.approveHospital(id)
+      setHospitalData(hospitalData.map(h =>
+        h._id === id ? { ...h, status: 'approved', updatedAt: new Date().toISOString() } : h
       ))
+      loadHospitalStats()
+      setShowHospitalMenu(null)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  const handleReject = async (id) => {
+    if (!window.confirm('Are you sure you want to REJECT and DELETE this hospital? This action cannot be undone.')) return;
+    try {
+      await apiService.rejectHospital(id)
+      // Remove from list since it's deleted
+      setHospitalData(hospitalData.filter(h => h._id !== id))
+      loadHospitalStats()
       setShowHospitalMenu(null)
     } catch (err) {
       setError(err.message)
@@ -129,7 +184,7 @@ const AdminDashboard = ({ onLogout }) => {
     <div className="dashboard-content">
       {error && <div className="error-message">{error}</div>}
       {loading && <div className="loading-message">Loading...</div>}
-      
+
       {/* Stats Grid */}
       <div className="stats-grid">
         <StatCard icon={Building2} label="Total Hospitals" value={dashboardStats.totalHospitals || '0'} bgColor="#3b82f6" />
@@ -169,7 +224,7 @@ const AdminDashboard = ({ onLogout }) => {
                   <td>{new Date(hospital.updatedAt).toLocaleDateString()}</td>
                   <td className="action-cell">
                     <div className="action-dropdown">
-                      <button 
+                      <button
                         className="action-btn"
                         onClick={() => setShowHospitalMenu(showHospitalMenu === hospital._id ? null : hospital._id)}
                       >
@@ -177,13 +232,13 @@ const AdminDashboard = ({ onLogout }) => {
                       </button>
                       {showHospitalMenu === hospital._id && (
                         <div className="dropdown-menu">
-                          <button 
+                          <button
                             className="dropdown-item approve"
                             onClick={() => updateHospitalStatus(hospital._id, 'approved')}
                           >
                             <Check size={14} /> Approve
                           </button>
-                          <button 
+                          <button
                             className="dropdown-item reject"
                             onClick={() => updateHospitalStatus(hospital._id, 'suspended')}
                           >
@@ -205,70 +260,234 @@ const AdminDashboard = ({ onLogout }) => {
     </div>
   )
 
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }))
+  }
+
+  const clearFilters = () => {
+    setFilters({ search: '', state: '', specialization: '', status: '' })
+  }
+
+  const renderHospitalTabs = () => (
+    <div className="dashboard-tabs">
+      <button
+        className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
+        onClick={() => setActiveTab('all')}
+      >
+        <Grid size={16} /> All
+        <span className="tab-count">{hospitalStats.total}</span>
+      </button>
+      <button
+        className={`tab-btn ${activeTab === 'region' ? 'active' : ''}`}
+        onClick={() => {
+          setActiveTab('region')
+          handleFilterChange('state', '')
+        }}
+      >
+        <Map size={16} /> Region
+        <span className="tab-count">{hospitalStats.regionStats?.length || 0}</span>
+      </button>
+      <button
+        className={`tab-btn ${activeTab === 'specialization' ? 'active' : ''}`}
+        onClick={() => {
+          setActiveTab('specialization')
+          handleFilterChange('specialization', '')
+        }}
+      >
+        <Stethoscope size={16} /> Specializations
+        <span className="tab-count">{hospitalStats.specializationStats?.length || 0}</span>
+      </button>
+      <button
+        className={`tab-btn ${activeTab === 'emergency' ? 'active' : ''}`}
+        onClick={() => setActiveTab('emergency')}
+      >
+        <Siren size={16} /> Emergency
+        <span className="tab-count">{hospitalStats.emergencyCount}</span>
+      </button>
+    </div>
+  )
+
+  const renderHospitalFilters = () => (
+    <div className="filters-bar">
+      <div className="search-box">
+        <Search size={16} />
+        <input
+          type="text"
+          placeholder="Search hospitals..."
+          value={filters.search}
+          onChange={(e) => handleFilterChange('search', e.target.value)}
+        />
+      </div>
+      <select
+        className="filter-select"
+        value={filters.state}
+        onChange={(e) => handleFilterChange('state', e.target.value)}
+      >
+        <option value="">All Regions</option>
+        {hospitalStats.regionStats?.map(r => (
+          <option key={r._id} value={r._id}>{r._id}</option>
+        ))}
+      </select>
+      <select
+        className="filter-select"
+        value={filters.specialization}
+        onChange={(e) => handleFilterChange('specialization', e.target.value)}
+      >
+        <option value="">All Specializations</option>
+        {hospitalStats.specializationStats?.map(s => (
+          <option key={s._id} value={s._id}>{s._id}</option>
+        ))}
+      </select>
+      <select
+        className="filter-select"
+        value={filters.status}
+        onChange={(e) => handleFilterChange('status', e.target.value)}
+      >
+        <option value="">All Statuses</option>
+        <option value="approved">Approved</option>
+        <option value="pending">Pending</option>
+        <option value="suspended">Suspended</option>
+      </select>
+      <button className="clear-filters" onClick={clearFilters}>
+        Clear Filters
+      </button>
+    </div>
+  )
+
   const renderHospitals = () => (
     <div className="dashboard-content">
       {error && <div className="error-message">{error}</div>}
       {loading && <div className="loading-message">Loading...</div>}
-      
-      <h2 className="section-title">All Hospitals</h2>
-      <div className="table-wrapper">
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Hospital Name</th>
-              <th>Location</th>
-              <th>Contact</th>
-              <th>Status</th>
-              <th>Last Updated</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {hospitalData.map(hospital => (
-              <tr key={hospital._id}>
-                <td className="hospital-name">{hospital.name}</td>
-                <td>{hospital.address}</td>
-                <td>{hospital.contactEmail}</td>
-                <td>
-                  <span className={`status-badge status-${hospital.status}`}>
-                    {hospital.status.charAt(0).toUpperCase() + hospital.status.slice(1)}
-                  </span>
-                </td>
-                <td>{new Date(hospital.updatedAt).toLocaleDateString()}</td>
-                <td className="action-cell">
-                  <div className="action-dropdown">
-                    <button 
-                      className="action-btn"
-                      onClick={() => setShowHospitalMenu(showHospitalMenu === hospital._id ? null : hospital._id)}
-                    >
-                      <ChevronDown size={16} />
-                    </button>
-                    {showHospitalMenu === hospital._id && (
-                      <div className="dropdown-menu">
-                        <button 
-                          className="dropdown-item approve"
-                          onClick={() => updateHospitalStatus(hospital._id, 'approved')}
-                        >
-                          <Check size={14} /> Approve
-                        </button>
-                        <button 
-                          className="dropdown-item reject"
-                          onClick={() => updateHospitalStatus(hospital._id, 'suspended')}
-                        >
-                          <X size={14} /> Suspend
-                        </button>
-                        <button className="dropdown-item view">
-                          <Eye size={14} /> View
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </td>
+
+      <h2 className="section-title">Hospitals Dashboard</h2>
+
+      {renderHospitalTabs()}
+
+      {/* Show Filters only if in list views */}
+      {(activeTab === 'all' || activeTab === 'emergency' || (activeTab === 'region' && filters.state) || (activeTab === 'specialization' && filters.specialization)) && renderHospitalFilters()}
+
+      {activeTab === 'region' && !filters.state && (
+        <div className="region-grid">
+          {hospitalStats.regionStats?.map(region => (
+            <div
+              key={region._id}
+              className="region-card"
+              onClick={() => {
+                handleFilterChange('state', region._id)
+              }}
+            >
+              <div className="region-header">
+                <span className="region-name">{region._id}</span>
+                <span className="region-total">{region.totalHospitals}</span>
+              </div>
+              <div className="region-stats">
+                <div className="region-stat-item">
+                  <span>Approved</span>
+                  <span className="region-stat-value">{region.approvedHospitals}</span>
+                </div>
+                <div className="region-stat-item">
+                  <span>Pending</span>
+                  <span className="region-stat-value">{region.totalHospitals - region.approvedHospitals}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {activeTab === 'specialization' && !filters.specialization && (
+        <div className="spec-grid">
+          {hospitalStats.specializationStats?.map(spec => (
+            <div
+              key={spec._id}
+              className="spec-card"
+              onClick={() => {
+                handleFilterChange('specialization', spec._id)
+              }}
+            >
+              <div className="spec-icon">
+                <Heart size={24} />
+              </div>
+              <span className="spec-name">{spec._id}</span>
+              <span className="spec-count">{spec.count} Hospitals</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(activeTab === 'all' || activeTab === 'emergency' || (activeTab === 'region' && filters.state) || (activeTab === 'specialization' && filters.specialization)) && (
+        <div className="table-wrapper">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Hospital Name</th>
+                <th>Location</th>
+                <th>Specializations</th>
+                <th>Status</th>
+                <th>Emergency</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {hospitalData.map(hospital => (
+                <tr key={hospital._id}>
+                  <td className="hospital-name">{hospital.name}</td>
+                  <td>
+                    {hospital.location?.city ? `${hospital.location.city}, ` : ''}
+                    {hospital.location?.state || 'Unknown'}
+                  </td>
+                  <td>{hospital.specializations?.slice(0, 2).join(', ') || 'None'}...</td>
+                  <td>
+                    <span className={`status-badge status-${hospital.status}`}>
+                      {hospital.status.charAt(0).toUpperCase() + hospital.status.slice(1)}
+                    </span>
+                  </td>
+                  <td>
+                    {hospital.contactInfo?.emergencyPhone ? (
+                      <span className="urgency-badge emergency">Emergency</span>
+                    ) : (
+                      <span className="urgency-badge routine">Routine</span>
+                    )}
+                  </td>
+                  <td className="action-cell">
+                    <div className="action-dropdown">
+                      <button
+                        className="action-btn"
+                        onClick={() => setShowHospitalMenu(showHospitalMenu === hospital._id ? null : hospital._id)}
+                      >
+                        <ChevronDown size={16} />
+                      </button>
+                      {showHospitalMenu === hospital._id && (
+                        <div className="dropdown-menu">
+                          {hospital.status === 'pending' && (
+                            <>
+                              <button
+                                className="dropdown-item approve"
+                                onClick={() => handleApprove(hospital._id)}
+                              >
+                                <Check size={14} /> Approve
+                              </button>
+                              <button
+                                className="dropdown-item reject"
+                                onClick={() => handleReject(hospital._id)}
+                              >
+                                <X size={14} /> Reject
+                              </button>
+                            </>
+                          )}
+                          <button className="dropdown-item view">
+                            <Eye size={14} /> View
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 
@@ -276,7 +495,7 @@ const AdminDashboard = ({ onLogout }) => {
     <div className="dashboard-content">
       {error && <div className="error-message">{error}</div>}
       {loading && <div className="loading-message">Loading...</div>}
-      
+
       <h2 className="section-title">Registered Donors</h2>
       <div className="donor-summary">
         <div className="donor-card">
@@ -323,7 +542,7 @@ const AdminDashboard = ({ onLogout }) => {
     <div className="dashboard-content">
       {error && <div className="error-message">{error}</div>}
       {loading && <div className="loading-message">Loading...</div>}
-      
+
       <h2 className="section-title">Organ Requests</h2>
       <div className="table-wrapper">
         <table className="admin-table">
