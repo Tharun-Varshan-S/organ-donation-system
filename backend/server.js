@@ -9,6 +9,7 @@ const { errorHandler, notFound } = require('./middleware/error');
 // Route imports
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
+const hospitalRoutes = require('./routes/hospital');
 
 // Connect to database
 connectDB();
@@ -52,6 +53,7 @@ app.get('/api/health', (req, res) => {
 // API Routes
 app.use('/api/admin', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/hospital', hospitalRoutes);
 
 // Error handling middleware
 app.use(notFound);

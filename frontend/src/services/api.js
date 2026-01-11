@@ -26,11 +26,11 @@ class ApiService {
   // Handle API response
   async handleResponse(response) {
     const data = await response.json()
-    
+
     if (!response.ok) {
       throw new Error(data.message || 'API request failed')
     }
-    
+
     return data
   }
 
@@ -41,13 +41,13 @@ class ApiService {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     })
-    
+
     const data = await this.handleResponse(response)
-    
+
     if (data.success && data.token) {
       this.setToken(data.token)
     }
-    
+
     return data
   }
 
@@ -57,7 +57,35 @@ class ApiService {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, name, secretKey })
     })
-    
+
+    return this.handleResponse(response)
+  }
+
+  // Hospital Authentication
+  async hospitalLogin(email, password) {
+    const response = await fetch(`${API_BASE_URL}/hospital/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    })
+
+    const data = await this.handleResponse(response)
+
+    if (data.success && data.token) {
+      localStorage.setItem('hospitalToken', data.token)
+      this.hospitalToken = data.token
+    }
+
+    return data
+  }
+
+  async hospitalRegister(formData) {
+    const response = await fetch(`${API_BASE_URL}/hospital/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    })
+
     return this.handleResponse(response)
   }
 
@@ -66,7 +94,7 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/admin/dashboard/stats`, {
       headers: this.getAuthHeaders()
     })
-    
+
     return this.handleResponse(response)
   }
 
@@ -75,7 +103,7 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/admin/hospitals?page=${page}&limit=${limit}`, {
       headers: this.getAuthHeaders()
     })
-    
+
     return this.handleResponse(response)
   }
 
@@ -85,7 +113,7 @@ class ApiService {
       headers: this.getAuthHeaders(),
       body: JSON.stringify({ status })
     })
-    
+
     return this.handleResponse(response)
   }
 
@@ -94,7 +122,7 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/admin/donors?page=${page}&limit=${limit}`, {
       headers: this.getAuthHeaders()
     })
-    
+
     return this.handleResponse(response)
   }
 
@@ -103,7 +131,7 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/admin/requests?page=${page}&limit=${limit}`, {
       headers: this.getAuthHeaders()
     })
-    
+
     return this.handleResponse(response)
   }
 
@@ -112,7 +140,7 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/admin/transplants?page=${page}&limit=${limit}`, {
       headers: this.getAuthHeaders()
     })
-    
+
     return this.handleResponse(response)
   }
 
