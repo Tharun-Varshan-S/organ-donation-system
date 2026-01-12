@@ -1,23 +1,40 @@
 const express = require('express');
-const { adminAuth } = require('../middleware/auth');
 const {
-  adminLogin,
   getDashboardStats,
   getHospitals,
+  getHospitalStats,
   approveHospital,
-  rejectHospital
+  rejectHospital,
+
+  updateHospitalStatus,
+  getDonors,
+  getRequests,
+  getTransplants
 } = require('../controllers/adminController');
+const { protect, adminOnly } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Public routes
-router.post('/login', adminLogin);
+// Apply middleware to all routes
+router.use(protect, adminOnly);
 
-// Protected routes
-router.use(adminAuth);
+// Dashboard routes
 router.get('/dashboard/stats', getDashboardStats);
+
+// Hospital management routes
 router.get('/hospitals', getHospitals);
+router.get('/hospitals/stats', getHospitalStats);
 router.put('/hospitals/:id/approve', approveHospital);
-router.delete('/hospitals/:id/reject', rejectHospital);
+router.put('/hospitals/:id/reject', rejectHospital);
+router.put('/hospitals/:id/status', updateHospitalStatus);
+
+// Donor routes (read-only)
+router.get('/donors', getDonors);
+
+// Request routes (read-only)
+router.get('/requests', getRequests);
+
+// Transplant routes (read-only)
+router.get('/transplants', getTransplants);
 
 module.exports = router;
