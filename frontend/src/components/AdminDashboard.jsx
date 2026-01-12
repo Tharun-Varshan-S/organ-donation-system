@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import {
   Home, Building2, Heart, AlertCircle, Repeat2, BarChart3, Settings, LogOut,
   Search, Bell, User, ChevronDown, Edit2, Check, X, Eye,
-  Map, Stethoscope, Siren, Grid, Filter
+  Map, Stethoscope, Siren, Grid, Filter, FileText
 } from 'lucide-react'
 import { OrgDemandBar, HospitalPie, MonthlyLine } from './Charts'
 import AdminHospitalCard from './AdminHospitalCard'
@@ -57,6 +57,9 @@ const AdminDashboard = ({ onLogout }) => {
       case 'transplants':
         loadTransplants()
         break
+      case 'hospitalRequests':
+        loadHospitals()
+        break
     }
   }, [currentPage])
 
@@ -89,6 +92,14 @@ const AdminDashboard = ({ onLogout }) => {
         ...filters,
         emergency: activeTab === 'emergency'
       }
+
+      // STRICT FILTERING BASED ON PAGE
+      if (currentPage === 'hospitals') {
+        queryFilters.status = 'approved';
+      } else if (currentPage === 'hospitalRequests') {
+        queryFilters.status = 'pending';
+      }
+
       const response = await apiService.getHospitals(queryFilters)
       setHospitalData(response.data.hospitals)
     } catch (err) {
@@ -557,6 +568,37 @@ const AdminDashboard = ({ onLogout }) => {
     </div>
   )
 
+  const renderHospitalRequests = () => (
+    <div className="dashboard-content">
+      {error && <div className="error-message">{error}</div>}
+      {loading && <div className="loading-message">Loading...</div>}
+
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="section-title mb-0">Hospital Registration Requests</h2>
+        <div className="bg-white/50 px-4 py-2 rounded-lg text-[#556B73] font-medium border border-[#798E93]/20">
+          Total Pending: <span className="text-red-600 font-bold">{dashboardStats.pendingHospitals || 0}</span>
+        </div>
+      </div>
+
+      <div className="hospitals-list-container">
+        {hospitalData.map(hospital => (
+          <AdminHospitalCard
+            key={hospital._id}
+            hospital={hospital}
+            basePath="/admin/hospital-requests"
+          />
+        ))}
+        {hospitalData.length === 0 && (
+          <div className="no-data-message text-center py-12 bg-white/30 rounded-xl">
+            <FileText className="w-12 h-12 text-[#798E93] mx-auto mb-4 opacity-50" />
+            <p className="text-lg text-[#556B73]">No pending hospital requests.</p>
+            <p className="text-[#798E93]">New registration requests will appear here.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
   const renderReports = () => (
     <div className="dashboard-content">
       <h2 className="section-title">Analytics & Reports</h2>
@@ -618,6 +660,17 @@ const AdminDashboard = ({ onLogout }) => {
             onClick={() => setCurrentPage('hospitals')}
           >
             <Building2 size={18} /> Hospitals
+          </button>
+          <button
+            className={`nav-item ${currentPage === 'hospitalRequests' ? 'active' : ''}`}
+            onClick={() => setCurrentPage('hospitalRequests')}
+          >
+            <FileText size={18} /> Hospital Requests
+            {dashboardStats.pendingHospitals > 0 && (
+              <span className="ml-auto bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">
+                {dashboardStats.pendingHospitals}
+              </span>
+            )}
           </button>
           <button
             className={`nav-item ${currentPage === 'donors' ? 'active' : ''}`}
@@ -684,6 +737,7 @@ const AdminDashboard = ({ onLogout }) => {
         {currentPage === 'requests' && renderOrganRequests()}
         {currentPage === 'transplants' && renderTransplants()}
         {currentPage === 'reports' && renderReports()}
+        {currentPage === 'hospitalRequests' && renderHospitalRequests()}
         {currentPage === 'settings' && renderSettings()}
       </div>
     </div>
