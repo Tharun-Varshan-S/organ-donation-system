@@ -30,6 +30,9 @@ function App() {
             <Route path="/hospitals" element={<HospitalDashboard />} />
             <Route path="/hospitals/:hospitalId" element={<HospitalOverview />} />
 
+            {/* Admin Routes */}
+            <Route path="/admin/hospitals/:hospitalId" element={<HospitalOverview />} />
+
             {/* Legacy Hospital List Route (can be deprecated) */}
             <Route path="/hospital-list" element={<HospitalList />} />
 

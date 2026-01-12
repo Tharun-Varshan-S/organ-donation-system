@@ -1,0 +1,154 @@
+.admin-hospital-card {
+    display: flex;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid #e2e8f0;
+    cursor: pointer;
+    margin-bottom: 16px;
+    position: relative;
+}
+
+.admin-hospital-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    border-color: #cbd5e1;
+}
+
+.admin-card-image-wrapper {
+    width: 280px;
+    min-width: 280px;
+    height: 200px;
+    position: relative;
+}
+
+.admin-card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.admin-card-details {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.admin-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.admin-hospital-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 6px 0;
+}
+
+.admin-location {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.admin-badges {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.approved {
+    background-color: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+
+.status-badge.suspended {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.status-badge.pending {
+    background-color: #fffbeb;
+    color: #d97706;
+    border: 1px solid #fde68a;
+}
+
+.emergency-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: #fee2e2;
+    color: #ef4444;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.admin-specs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.spec-chip {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.admin-card-footer {
+    border-top: 1px solid #f1f5f9;
+    margin-top: auto;
+    padding-top: 12px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.view-details-text {
+    font-size: 0.85rem;
+    color: #3b82f6;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .admin-hospital-card {
+        flex-direction: column;
+    }
+
+    .admin-card-image-wrapper {
+        width: 100%;
+        height: 180px;
+    }
+}

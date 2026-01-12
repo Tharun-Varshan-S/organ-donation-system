@@ -5,6 +5,7 @@ import {
   Map, Stethoscope, Siren, Grid, Filter
 } from 'lucide-react'
 import { OrgDemandBar, HospitalPie, MonthlyLine } from './Charts'
+import AdminHospitalCard from './AdminHospitalCard'
 import apiService from '../services/api'
 import './AdminDashboard.css'
 
@@ -416,76 +417,13 @@ const AdminDashboard = ({ onLogout }) => {
       )}
 
       {(activeTab === 'all' || activeTab === 'emergency' || (activeTab === 'region' && filters.state) || (activeTab === 'specialization' && filters.specialization)) && (
-        <div className="table-wrapper">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Hospital Name</th>
-                <th>Location</th>
-                <th>Specializations</th>
-                <th>Status</th>
-                <th>Emergency</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {hospitalData.map(hospital => (
-                <tr key={hospital._id}>
-                  <td className="hospital-name">{hospital.name}</td>
-                  <td>
-                    {hospital.location?.city ? `${hospital.location.city}, ` : ''}
-                    {hospital.location?.state || 'Unknown'}
-                  </td>
-                  <td>{hospital.specializations?.slice(0, 2).join(', ') || 'None'}...</td>
-                  <td>
-                    <span className={`status-badge status-${hospital.status}`}>
-                      {hospital.status.charAt(0).toUpperCase() + hospital.status.slice(1)}
-                    </span>
-                  </td>
-                  <td>
-                    {hospital.contactInfo?.emergencyPhone ? (
-                      <span className="urgency-badge emergency">Emergency</span>
-                    ) : (
-                      <span className="urgency-badge routine">Routine</span>
-                    )}
-                  </td>
-                  <td className="action-cell">
-                    <div className="action-dropdown">
-                      <button
-                        className="action-btn"
-                        onClick={() => setShowHospitalMenu(showHospitalMenu === hospital._id ? null : hospital._id)}
-                      >
-                        <ChevronDown size={16} />
-                      </button>
-                      {showHospitalMenu === hospital._id && (
-                        <div className="dropdown-menu">
-                          {hospital.status === 'pending' && (
-                            <>
-                              <button
-                                className="dropdown-item approve"
-                                onClick={() => handleApprove(hospital._id)}
-                              >
-                                <Check size={14} /> Approve
-                              </button>
-                              <button
-                                className="dropdown-item reject"
-                                onClick={() => handleReject(hospital._id)}
-                              >
-                                <X size={14} /> Reject
-                              </button>
-                            </>
-                          )}
-                          <button className="dropdown-item view">
-                            <Eye size={14} /> View
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="hospitals-list-container">
+          {hospitalData.map(hospital => (
+            <AdminHospitalCard key={hospital._id} hospital={hospital} />
+          ))}
+          {hospitalData.length === 0 && (
+            <div className="no-data-message">No hospitals found matching your filters.</div>
+          )}
         </div>
       )}
     </div>
