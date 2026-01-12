@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Users, Activity, Filter, Heart, Search } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, Activity, Filter, Heart, Search, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -12,7 +12,7 @@ import Input from '../components/Input';
 import Select from '../components/Select';
 
 const HospitalDashboard = () => {
-  const { user, logout, donors, deleteDonor } = useAuth();
+  const { user, logout, donors, deleteDonor, showApprovalMessage, setShowApprovalMessage } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterOrgan, setFilterOrgan] = useState('all');
   const [filterBlood, setFilterBlood] = useState('all');
@@ -72,10 +72,102 @@ const HospitalDashboard = () => {
     { value: 'O-', label: 'O-' }
   ];
 
+  // Check hospital approval status
+  const hospitalStatus = user?.status || 'PENDING';
+  const isApproved = hospitalStatus === 'APPROVED';
+  const isRejected = hospitalStatus === 'REJECTED';
+
+  // Show approval message if just approved
+  useEffect(() => {
+    if (showApprovalMessage && isApproved) {
+      const timer = setTimeout(() => {
+        setShowApprovalMessage(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showApprovalMessage, isApproved, setShowApprovalMessage]);
+
+  // If rejected, show rejection message
+  if (isRejected) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#D4E8E8] via-[#A2BFC6] to-[#798E93]">
+        <AnimatedBackground />
+        <Navbar user={user} onLogout={logout} />
+        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <Card className="text-center">
+            <XCircle className="w-20 h-20 text-red-600 mx-auto mb-6" />
+            <h1 className="text-3xl font-bold text-[#2C3E44] mb-4">Registration Rejected</h1>
+            <p className="text-lg text-[#556B73] mb-6">
+              Your hospital registration has been rejected by the administrator.
+            </p>
+            <p className="text-[#798E93] mb-8">
+              Please contact support if you believe this is an error.
+            </p>
+            <Button variant="primary" onClick={logout}>
+              Return to Home
+            </Button>
+          </Card>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // If pending, show pending message
+  if (!isApproved) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#D4E8E8] via-[#A2BFC6] to-[#798E93]">
+        <AnimatedBackground />
+        <Navbar user={user} onLogout={logout} />
+        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <Card className="text-center">
+            <Clock className="w-20 h-20 text-yellow-600 mx-auto mb-6" />
+            <h1 className="text-3xl font-bold text-[#2C3E44] mb-4">Registration Under Review</h1>
+            <p className="text-lg text-[#556B73] mb-6">
+              Your registration is under review. Please wait for admin approval.
+            </p>
+            <p className="text-[#798E93] mb-8">
+              You will be notified once your registration has been approved. This usually takes 24-48 hours.
+            </p>
+            <Button variant="primary" onClick={logout}>
+              Logout
+            </Button>
+          </Card>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#D4E8E8] via-[#A2BFC6] to-[#798E93]">
       <AnimatedBackground />
       <Navbar user={user} onLogout={logout} />
+
+      {/* Approval Success Message */}
+      {showApprovalMessage && (
+        <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+          <Card className="bg-green-50 border-green-500 border-2 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <CheckCircle className="w-8 h-8 text-green-600" />
+                <div>
+                  <h3 className="text-lg font-bold text-green-800">Registration Approved!</h3>
+                  <p className="text-green-700">
+                    Your registration has been approved by the admin. You now have access to all features.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowApprovalMessage(false)}
+                className="text-green-700 hover:text-green-900 font-bold text-xl"
+              >
+                ×
+              </button>
+            </div>
+          </Card>
+        </div>
+      )}
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-4xl font-bold text-[#2C3E44] mb-8 text-center">Donor Log</h1>

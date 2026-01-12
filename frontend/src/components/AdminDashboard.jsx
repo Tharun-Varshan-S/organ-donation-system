@@ -104,7 +104,7 @@ const AdminDashboard = ({ onLogout }) => {
   const updateHospitalStatus = async (id, newStatus) => {
     try {
       await apiService.updateHospitalStatus(id, newStatus)
-      setHospitalData(hospitalData.map(h => 
+      setHospitalData(hospitalData.map(h =>
         h._id === id ? { ...h, status: newStatus, updatedAt: new Date().toISOString() } : h
       ))
       setShowHospitalMenu(null)
@@ -129,7 +129,7 @@ const AdminDashboard = ({ onLogout }) => {
     <div className="dashboard-content">
       {error && <div className="error-message">{error}</div>}
       {loading && <div className="loading-message">Loading...</div>}
-      
+
       {/* Stats Grid */}
       <div className="stats-grid">
         <StatCard icon={Building2} label="Total Hospitals" value={dashboardStats.totalHospitals || '0'} bgColor="#3b82f6" />
@@ -169,7 +169,7 @@ const AdminDashboard = ({ onLogout }) => {
                   <td>{new Date(hospital.updatedAt).toLocaleDateString()}</td>
                   <td className="action-cell">
                     <div className="action-dropdown">
-                      <button 
+                      <button
                         className="action-btn"
                         onClick={() => setShowHospitalMenu(showHospitalMenu === hospital._id ? null : hospital._id)}
                       >
@@ -177,13 +177,13 @@ const AdminDashboard = ({ onLogout }) => {
                       </button>
                       {showHospitalMenu === hospital._id && (
                         <div className="dropdown-menu">
-                          <button 
+                          <button
                             className="dropdown-item approve"
                             onClick={() => updateHospitalStatus(hospital._id, 'approved')}
                           >
                             <Check size={14} /> Approve
                           </button>
-                          <button 
+                          <button
                             className="dropdown-item reject"
                             onClick={() => updateHospitalStatus(hospital._id, 'suspended')}
                           >
@@ -209,7 +209,7 @@ const AdminDashboard = ({ onLogout }) => {
     <div className="dashboard-content">
       {error && <div className="error-message">{error}</div>}
       {loading && <div className="loading-message">Loading...</div>}
-      
+
       <h2 className="section-title">All Hospitals</h2>
       <div className="table-wrapper">
         <table className="admin-table">
@@ -237,7 +237,7 @@ const AdminDashboard = ({ onLogout }) => {
                 <td>{new Date(hospital.updatedAt).toLocaleDateString()}</td>
                 <td className="action-cell">
                   <div className="action-dropdown">
-                    <button 
+                    <button
                       className="action-btn"
                       onClick={() => setShowHospitalMenu(showHospitalMenu === hospital._id ? null : hospital._id)}
                     >
@@ -245,13 +245,13 @@ const AdminDashboard = ({ onLogout }) => {
                     </button>
                     {showHospitalMenu === hospital._id && (
                       <div className="dropdown-menu">
-                        <button 
+                        <button
                           className="dropdown-item approve"
                           onClick={() => updateHospitalStatus(hospital._id, 'approved')}
                         >
                           <Check size={14} /> Approve
                         </button>
-                        <button 
+                        <button
                           className="dropdown-item reject"
                           onClick={() => updateHospitalStatus(hospital._id, 'suspended')}
                         >
@@ -276,7 +276,7 @@ const AdminDashboard = ({ onLogout }) => {
     <div className="dashboard-content">
       {error && <div className="error-message">{error}</div>}
       {loading && <div className="loading-message">Loading...</div>}
-      
+
       <h2 className="section-title">Registered Donors</h2>
       <div className="donor-summary">
         <div className="donor-card">
@@ -323,7 +323,7 @@ const AdminDashboard = ({ onLogout }) => {
     <div className="dashboard-content">
       {error && <div className="error-message">{error}</div>}
       {loading && <div className="loading-message">Loading...</div>}
-      
+
       <h2 className="section-title">Organ Requests</h2>
       <div className="table-wrapper">
         <table className="admin-table">

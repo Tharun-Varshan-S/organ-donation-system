@@ -13,6 +13,7 @@ import generalRoutes from './routes/route.js'; // Existing general routes
 import setupMiddleware from './middlewares/setup.js'; // Existing setup if needed
 
 dotenv.config();
+console.log('DEBUG: MONGODB_URI exists:', !!process.env.MONGODB_URI);
 
 // Connect to database
 connectDB();

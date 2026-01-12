@@ -17,9 +17,14 @@ const Login = () => {
     e.preventDefault();
     const success = await login(email, password, role);
     if (success) {
-      if (role === 'donor') navigate('/donor-dashboard');
-      else if (role === 'hospital') navigate('/hospital-dashboard');
-      else if (role === 'admin') navigate('/admin-dashboard');
+      if (role === 'donor') {
+        navigate('/donor-dashboard');
+      } else if (role === 'hospital') {
+        // Navigation will be handled by HospitalDashboard based on status
+        navigate('/hospital-dashboard');
+      } else if (role === 'admin') {
+        navigate('/admin-dashboard');
+      }
     }
   };
 

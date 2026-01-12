@@ -26,8 +26,12 @@ const Register = () => {
     e.preventDefault();
     const success = await register(formData);
     if (success) {
-      if (formData.role === 'donor') navigate('/donor-dashboard');
-      else navigate('/hospital-dashboard');
+      if (formData.role === 'donor') {
+        navigate('/donor-dashboard');
+      } else if (formData.role === 'hospital') {
+        // Hospital will be redirected but won't have access until approved
+        navigate('/hospital-dashboard');
+      }
     }
   };
 
@@ -132,6 +136,15 @@ const Register = () => {
               required
             />
           </>
+        )}
+        {formData.role === 'hospital' && (
+          <Input
+            label="Hospital Address"
+            placeholder="Full Address"
+            value={formData.address}
+            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            required
+          />
         )}
         <Input
           label="Password"
