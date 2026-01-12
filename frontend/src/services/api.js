@@ -96,6 +96,14 @@ class ApiService {
     return this.handleResponse(response)
   }
 
+  async getAdminHospitalDetails(id) {
+    const response = await fetch(`${API_BASE_URL}/admin/hospitals/${id}`, {
+      headers: this.getAuthHeaders()
+    })
+
+    return this.handleResponse(response)
+  }
+
   async approveHospital(hospitalId) {
     const response = await fetch(`${API_BASE_URL}/admin/hospitals/${hospitalId}/approve`, {
       method: 'PUT',
@@ -105,11 +113,21 @@ class ApiService {
     return this.handleResponse(response)
   }
 
-  async rejectHospital(hospitalId) {
+  async rejectHospital(hospitalId, reason) {
     const response = await fetch(`${API_BASE_URL}/admin/hospitals/${hospitalId}/reject`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
-      // Optional: body: JSON.stringify({ reason }) if we add modal later
+      body: JSON.stringify({ reason })
+    })
+
+    return this.handleResponse(response)
+  }
+
+  async updateHospitalStatus(hospitalId, status, reason) {
+    const response = await fetch(`${API_BASE_URL}/admin/hospitals/${hospitalId}/status`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ status, reason })
     })
 
     return this.handleResponse(response)
@@ -118,6 +136,14 @@ class ApiService {
   // Donors
   async getDonors(page = 1, limit = 10) {
     const response = await fetch(`${API_BASE_URL}/admin/donors?page=${page}&limit=${limit}`, {
+      headers: this.getAuthHeaders()
+    })
+
+    return this.handleResponse(response)
+  }
+
+  async getDonorAnalytics() {
+    const response = await fetch(`${API_BASE_URL}/admin/analytics/donors`, {
       headers: this.getAuthHeaders()
     })
 
@@ -136,6 +162,24 @@ class ApiService {
   // Transplants
   async getTransplants(page = 1, limit = 10) {
     const response = await fetch(`${API_BASE_URL}/admin/transplants?page=${page}&limit=${limit}`, {
+      headers: this.getAuthHeaders()
+    })
+
+    return this.handleResponse(response)
+  }
+
+  // Analytics
+  async getHospitalPerformance() {
+    const response = await fetch(`${API_BASE_URL}/admin/analytics/hospital-performance`, {
+      headers: this.getAuthHeaders()
+    })
+
+    return this.handleResponse(response)
+  }
+
+  // Audit
+  async getAuditLogs() {
+    const response = await fetch(`${API_BASE_URL}/admin/audit`, {
       headers: this.getAuthHeaders()
     })
 

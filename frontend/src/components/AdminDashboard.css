@@ -831,3 +831,21 @@
   font-size: 13px;
   color: #64748b;
 }
+/* Main Grid Container for Admin Hospitals */
+.hospitals-list-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+    padding-bottom: 32px;
+}
+
+.no-data-message {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    color: #64748b;
+    font-size: 1rem;
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px dashed #e2e8f0;
+}
