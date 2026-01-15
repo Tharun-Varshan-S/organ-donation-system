@@ -1,11 +1,9 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { MapPin, Check, Star, ShieldCheck, CheckCircle2, X } from 'lucide-react';
 import { getHospitalImage } from '../utils/mockImages';
 import './AdminHospitalCard.css';
 
-const AdminHospitalCard = ({ hospital, basePath = '/admin/hospitals', onApprove, onReject }) => {
-    const navigate = useNavigate();
+const AdminHospitalCard = ({ hospital, onApprove, onReject, onClick }) => {
     const [actionLoading, setActionLoading] = React.useState(null); // 'approve' or 'reject'
     const image = getHospitalImage(hospital);
 
@@ -30,7 +28,6 @@ const AdminHospitalCard = ({ hospital, basePath = '/admin/hospitals', onApprove,
     return (
         <div
             className={`admin-hospital-card group ${hospital.status === 'pending' ? 'pending-request' : ''}`}
-            onClick={() => navigate(`${basePath}/${hospital._id}`)}
             role="button"
             tabIndex={0}
         >
@@ -67,15 +64,19 @@ const AdminHospitalCard = ({ hospital, basePath = '/admin/hospitals', onApprove,
                     <span>{locationLine || 'Location N/A'}</span>
                 </div>
 
-                {/* Mini Stats Badges */}
+                {/* Mini Stats Badges - ENHANCED with Backend Data */}
                 <div className="flex gap-2 my-2">
                     <div className="flex-1 bg-gray-50 p-2 rounded-xl text-center border border-gray-100">
                         <p className="text-[10px] font-bold text-gray-400 uppercase">Donors</p>
-                        <p className="text-sm font-black text-[#1e293b]">{hospital.donorCount || 0}</p>
+                        <p className="text-sm font-black text-[#1e293b]">{hospital.quickStats?.donorCount || 0}</p>
+                    </div>
+                    <div className="flex-1 bg-gray-50 p-2 rounded-xl text-center border border-gray-100">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase">Requests</p>
+                        <p className="text-sm font-black text-blue-600">{hospital.quickStats?.requestCount || 0}</p>
                     </div>
                     <div className="flex-1 bg-gray-50 p-2 rounded-xl text-center border border-gray-100">
                         <p className="text-[10px] font-bold text-gray-400 uppercase">Success</p>
-                        <p className="text-sm font-black text-green-600">{hospital.successRate || 95}%</p>
+                        <p className="text-sm font-black text-green-600">{hospital.quickStats?.successRate || 0}%</p>
                     </div>
                 </div>
 

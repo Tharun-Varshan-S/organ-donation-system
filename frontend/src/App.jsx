@@ -10,6 +10,7 @@ import HospitalDashboard from './landing/pages/HospitalDashboard';
 import HospitalOverview from './landing/pages/HospitalOverview';
 import HospitalRequestDetails from './landing/pages/HospitalRequestDetails';
 import HospitalList from './pages/HospitalList';
+import HospitalDetailPage from './pages/HospitalDetailPage';
 import './App.css';
 
 function App() {
@@ -32,7 +33,7 @@ function App() {
             <Route path="/hospitals/:hospitalId" element={<HospitalOverview />} />
 
             {/* Admin Routes */}
-            <Route path="/admin/hospitals/:hospitalId" element={<HospitalOverview />} />
+            <Route path="/admin/hospitals/:id" element={<HospitalDetailPage />} />
             <Route path="/admin/hospital-requests/:hospitalId" element={<HospitalRequestDetails />} />
 
             {/* Legacy Hospital List Route (can be deprecated) */}

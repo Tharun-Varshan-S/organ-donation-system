@@ -116,17 +116,19 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
-// @desc    Get all hospitals
+// @desc    Get all hospitals (ENHANCED)
 // @route   GET /api/admin/hospitals
 // @access  Private (Admin)
 const getHospitals = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status, search, state, specialization, emergency } = req.query;
+    const { page = 1, limit = 10, status, search, state, city, specialization, emergency } = req.query;
 
     // Build query
     let query = {};
     if (status) query.status = status;
     if (state) query['location.state'] = state;
+    if (city) query['location.city'] = { $regex: city, $options: 'i' }; // ENHANCED: City filter
+
     if (specialization) query.specializations = specialization;
 
     if (emergency === 'true') {
@@ -153,10 +155,56 @@ const getHospitals = async (req, res) => {
 
     const total = await Hospital.countDocuments(query);
 
+    // ENHANCED: Aggregate quick stats for each hospital
+    const hospitalsWithStats = await Promise.all(hospitals.map(async (hospital) => {
+      const donorCount = await Donor.countDocuments({ registeredHospital: hospital._id });
+      const requestCount = await Request.countDocuments({ hospital: hospital._id });
+
+      const transplantStats = await Transplant.aggregate([
+        {
+          $match: {
+            $or: [
+              { 'recipient.hospital': hospital._id },
+              { 'transportDetails.pickupHospital': hospital._id }
+            ]
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: 1 },
+            successful: {
+              $sum: {
+                $cond: [
+                  { $and: [{ $eq: ['$status', 'completed'] }, { $eq: ['$outcome.success', true] }] },
+                  1,
+                  0
+                ]
+              }
+            }
+          }
+        }
+      ]);
+
+      const successRate = transplantStats[0]
+        ? Math.round((transplantStats[0].successful / transplantStats[0].total) * 100)
+        : 0;
+
+      return {
+        ...hospital._doc,
+        quickStats: {
+          donorCount,
+          requestCount,
+          successfulTransplants: transplantStats[0]?.successful || 0,
+          successRate
+        }
+      };
+    }));
+
     res.status(200).json({
       success: true,
       data: {
-        hospitals,
+        hospitals: hospitalsWithStats,
         pagination: {
           current: Number(page),
           pages: Math.ceil(total / limit),
@@ -173,6 +221,7 @@ const getHospitals = async (req, res) => {
     });
   }
 };
+
 
 // @desc    Get hospital statistics and groupings
 // @route   GET /api/admin/hospitals/stats
@@ -241,7 +290,7 @@ const getHospitalStats = async (req, res) => {
   }
 };
 
-// @desc    Get single hospital details
+// @desc    Get single hospital details (ENHANCED)
 // @route   GET /api/admin/hospitals/:id
 // @access  Private (Admin)
 const getHospitalDetails = async (req, res) => {
@@ -299,23 +348,92 @@ const getHospitalDetails = async (req, res) => {
       successRate: transplantStats[0] ? Math.round((transplantStats[0].successful / transplantStats[0].total) * 100) : 0
     };
 
-    // Activity Timeline (Hospitals + Requests + Transplants)
-    const requests = await Request.find({ hospital: hospital._id }).sort({ createdAt: -1 }).limit(5);
+    // ENHANCED: Activity Timeline (Comprehensive)
+    const requests = await Request.find({ hospital: hospital._id })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .select('requestId organType status patient.urgencyLevel createdAt updatedAt');
+
     const transplants = await Transplant.find({
       $or: [
         { 'recipient.hospital': hospital._id },
         { 'transportDetails.pickupHospital': hospital._id }
       ]
-    }).sort({ updatedAt: -1 }).limit(5);
+    })
+      .sort({ updatedAt: -1 })
+      .limit(10)
+      .select('transplantId organType status outcome.success createdAt updatedAt');
+
+    // ENHANCED: Status Change History (Audit Trail)
+    const statusHistory = await AuditLog.find({
+      entityType: 'HOSPITAL',
+      entityId: hospital._id
+    })
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .select('actionType performedBy details createdAt');
+
+    // ENHANCED: Build comprehensive timeline
+    const timeline = [
+      {
+        type: 'REGISTRATION',
+        timestamp: hospital.createdAt,
+        description: 'Hospital registered',
+        status: 'info'
+      },
+      ...(hospital.approvedAt ? [{
+        type: 'APPROVAL',
+        timestamp: hospital.approvedAt,
+        description: `Approved by ${hospital.approvedBy?.name || 'Admin'}`,
+        status: 'success'
+      }] : []),
+      ...requests.map(req => ({
+        type: 'REQUEST',
+        timestamp: req.createdAt,
+        description: `${req.organType} request (${req.status})`,
+        urgency: req.patient?.urgencyLevel,
+        status: req.status === 'completed' ? 'success' : 'pending',
+        entityId: req._id
+      })),
+      ...transplants.map(t => ({
+        type: 'TRANSPLANT',
+        timestamp: t.updatedAt,
+        description: `${t.organType} transplant ${t.outcome?.success ? 'successful' : 'completed'}`,
+        status: t.outcome?.success ? 'success' : 'warning',
+        entityId: t._id
+      })),
+      ...statusHistory.map(log => ({
+        type: log.actionType,
+        timestamp: log.createdAt,
+        description: log.details,
+        performedBy: log.performedBy?.name,
+        status: log.actionType === 'SUSPEND' ? 'error' : 'info'
+      }))
+    ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 50);
+
+    // ENHANCED: Reviews aggregation
+    const reviewStats = hospital.reviews && hospital.reviews.length > 0 ? {
+      averageRating: (hospital.reviews.reduce((sum, r) => sum + r.rating, 0) / hospital.reviews.length).toFixed(1),
+      totalReviews: hospital.reviews.length,
+      verifiedCount: hospital.reviews.filter(r => r.verified).length,
+      recentReviews: hospital.reviews.slice(-5).reverse()
+    } : {
+      averageRating: 0,
+      totalReviews: 0,
+      verifiedCount: 0,
+      recentReviews: []
+    };
 
     res.status(200).json({
       success: true,
       data: {
         ...hospital._doc,
         stats,
+        timeline,
+        reviewStats,
         recentActivity: {
-          requests,
-          transplants
+          requests: requests.slice(0, 5),
+          transplants: transplants.slice(0, 5)
         }
       }
     });
@@ -328,6 +446,7 @@ const getHospitalDetails = async (req, res) => {
     });
   }
 };
+
 
 // @desc    Approve hospital
 // @route   PUT /api/admin/hospitals/:id/approve
