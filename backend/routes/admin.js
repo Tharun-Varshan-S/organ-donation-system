@@ -14,7 +14,8 @@ const {
   updateHospitalStatus,
   getDonors,
   getRequests,
-  getTransplants
+  getTransplants,
+  getSystemReports
 } = require('../controllers/adminController');
 const { protect, adminOnly } = require('../middleware/auth');
 
@@ -47,5 +48,8 @@ router.get('/transplants', getTransplants);
 
 // Audit Logs
 router.get('/audit', getAuditLogs);
+
+// System Reports
+router.get('/reports/system', getSystemReports);
 
 module.exports = router;
