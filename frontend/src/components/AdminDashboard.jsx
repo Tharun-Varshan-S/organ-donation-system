@@ -12,6 +12,7 @@ import { OrgDemandBar, HospitalPie, MonthlyLine } from './Charts'
 import AdminHospitalCard from './AdminHospitalCard'
 import apiService from '../services/api'
 import './AdminDashboard.css'
+import { useNavigate } from 'react-router-dom'
 
 const StatCard = ({ icon: Icon, label, value, bgColor, subValue }) => (
   <div className="stat-card transition-all hover:scale-[1.02] hover:shadow-lg">
@@ -160,7 +161,7 @@ const DashboardSection = ({ dashboardStats, hospitalData, setCurrentPage, loadin
 }
 
 const HospitalsSection = ({
-  hospitalData, hospitalStats, activeTab, setActiveTab, filters, handleFilterChange, clearFilters, loading, error
+  hospitalData, hospitalStats, activeTab, setActiveTab, filters, handleFilterChange, clearFilters, loading, error, onHospitalClick
 }) => (
   <div className="dashboard-content">
     {error && <div className="error-message">{error}</div>}
@@ -233,7 +234,9 @@ const HospitalsSection = ({
     {(activeTab === 'all' || activeTab === 'emergency' || (activeTab === 'region' && filters.state) || (activeTab === 'specialization' && filters.specialization)) && (
       <div className="hospitals-list-container">
         {hospitalData.map(hospital => (
-          <AdminHospitalCard key={hospital._id} hospital={hospital} />
+          <div key={hospital._id} onClick={() => onHospitalClick && onHospitalClick(hospital._id)}>
+            <AdminHospitalCard hospital={hospital} />
+          </div>
         ))}
         {hospitalData.length === 0 && <div className="no-data-message">No hospitals matching filters.</div>}
       </div>
@@ -258,7 +261,6 @@ const HospitalRequestsSection = ({ hospitalData, handleApprove, handleReject, da
         <AdminHospitalCard
           key={hospital._id}
           hospital={hospital}
-          basePath="/admin/hospital-requests"
           onApprove={handleApprove}
           onReject={handleReject}
         />
@@ -563,6 +565,7 @@ const SettingsSection = () => {
 }
 
 const AdminDashboard = ({ onLogout }) => {
+  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState('dashboard')
   const [dashboardStats, setDashboardStats] = useState({})
   const [hospitalData, setHospitalData] = useState([])
@@ -815,6 +818,7 @@ const AdminDashboard = ({ onLogout }) => {
             clearFilters={clearFilters}
             loading={loading}
             error={error}
+            onHospitalClick={(id) => navigate(`/admin/hospitals/${id}`)}
           />
         )}
         {currentPage === 'donors' && <DonorsSection apiService={apiService} />}

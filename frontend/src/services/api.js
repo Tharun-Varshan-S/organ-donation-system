@@ -72,12 +72,13 @@ class ApiService {
 
   // Hospital Management
   async getHospitals(filters = {}) {
-    const { page = 1, limit = 10, status, search, state, specialization, emergency } = filters;
+    const { page = 1, limit = 10, status, search, state, city, specialization, emergency } = filters;
     let url = `${API_BASE_URL}/admin/hospitals?page=${page}&limit=${limit}`;
 
     if (status) url += `&status=${status}`;
     if (search) url += `&search=${encodeURIComponent(search)}`;
     if (state) url += `&state=${encodeURIComponent(state)}`;
+    if (city) url += `&city=${encodeURIComponent(city)}`; // ENHANCED: City filter
     if (specialization) url += `&specialization=${encodeURIComponent(specialization)}`;
     if (emergency) url += `&emergency=true`;
 

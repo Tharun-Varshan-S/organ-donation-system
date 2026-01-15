@@ -30,7 +30,11 @@ const hospitalSchema = new mongoose.Schema({
     coordinates: {
       latitude: Number,
       longitude: Number
-    }
+    },
+    // Enhanced: For admin map rendering
+    latitude: Number,
+    longitude: Number,
+    region: String
   },
   contactInfo: {
     phone: String,
@@ -46,6 +50,21 @@ const hospitalSchema = new mongoose.Schema({
     default: 'pending'
   },
   specializations: [String],
+  // Enhanced: Admin-only aggregated stats
+  stats: {
+    donorCount: { type: Number, default: 0 },
+    requestCount: { type: Number, default: 0 },
+    successfulTransplants: { type: Number, default: 0 },
+    successRate: { type: Number, default: 0 }
+  },
+  // Enhanced: User reviews (read-only for admins)
+  reviews: [{
+    rating: { type: Number, min: 1, max: 5 },
+    comment: String,
+    verified: { type: Boolean, default: false },
+    reviewerMasked: String, // Masked identity
+    createdAt: { type: Date, default: Date.now }
+  }],
   isActive: {
     type: Boolean,
     default: true
