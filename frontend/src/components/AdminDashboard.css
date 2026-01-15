@@ -849,3 +849,81 @@
     border-radius: 12px;
     border: 1px dashed #e2e8f0;
 }
+
+/* Enhancements for Command Center */
+.dashboard-command-center {
+    animation: fadeIn 0.5s ease-out;
+}
+
+.insights-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+    margin-top: 24px;
+}
+
+.insight-panel {
+    background: white;
+    border-radius: 20px;
+    padding: 24px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+}
+
+.recent-item {
+    transition: all 0.2s;
+}
+
+.recent-item:hover {
+    background: #f8fafc;
+    transform: translateX(4px);
+}
+
+/* Donor Analytics */
+.donor-analytics-page .analytics-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.donor-analytics-page .analytics-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+}
+
+/* Organ Hub */
+.organ-requests-hub .request-card {
+    transition: all 0.3s;
+}
+
+.organ-requests-hub .request-card:hover {
+    border-color: #3b82f6;
+    transform: translateY(-2px);
+}
+
+/* Reports Page */
+.reports-hero {
+    background-size: 200% 200%;
+    animation: gradientShift 10s ease infinite;
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Settings Portal */
+.settings-portal .settings-container {
+    min-height: 600px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive Overrides */
+@media (max-width: 1280px) {
+    .insights-grid {
+        grid-template-columns: 1fr;
+    }
+}

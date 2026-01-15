@@ -186,6 +186,14 @@ class ApiService {
     return this.handleResponse(response)
   }
 
+  async getSystemReports() {
+    const response = await fetch(`${API_BASE_URL}/admin/reports/system`, {
+      headers: this.getAuthHeaders()
+    })
+
+    return this.handleResponse(response)
+  }
+
   // Public Hospital Discovery
   async getPublicHospitals(filters = {}) {
     const { search, state, specialization } = filters;

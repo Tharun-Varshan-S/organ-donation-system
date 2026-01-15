@@ -9,24 +9,32 @@ const AuditLog = require('../models/AuditLog');
 // @access  Private (Admin)
 const getDashboardStats = async (req, res) => {
   try {
-    // Get counts
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    // 1. Hospital Stats
     const totalHospitals = await Hospital.countDocuments();
     const approvedHospitals = await Hospital.countDocuments({ status: 'approved' });
     const pendingHospitals = await Hospital.countDocuments({ status: 'pending' });
+    const suspendedHospitals = await Hospital.countDocuments({ status: 'suspended' });
 
+    // 2. Donor Stats (Read-only count)
     const totalDonors = await Donor.countDocuments();
-    const activeDonors = await Donor.countDocuments({ status: 'active' });
 
+    // 3. Request Stats
     const totalRequests = await Request.countDocuments();
-    const pendingRequests = await Request.countDocuments({ status: 'pending' });
+    const requestsToday = await Request.countDocuments({ createdAt: { $gte: today } });
+    const requestsThisMonth = await Request.countDocuments({ createdAt: { $gte: firstDayOfMonth } });
 
+    // 4. Transplant Stats
     const totalTransplants = await Transplant.countDocuments();
     const successfulTransplants = await Transplant.countDocuments({
       status: 'completed',
       'outcome.success': true
     });
 
-    // Get monthly stats for current year
+    // 5. Monthly Stats for Line Chart
     const currentYear = new Date().getFullYear();
     const monthlyTransplants = await Transplant.aggregate([
       {
@@ -34,7 +42,8 @@ const getDashboardStats = async (req, res) => {
           createdAt: {
             $gte: new Date(`${currentYear}-01-01`),
             $lte: new Date(`${currentYear}-12-31`)
-          }
+          },
+          status: 'completed'
         }
       },
       {
@@ -43,12 +52,10 @@ const getDashboardStats = async (req, res) => {
           count: { $sum: 1 }
         }
       },
-      {
-        $sort: { '_id': 1 }
-      }
+      { $sort: { '_id': 1 } }
     ]);
 
-    // Get organ type distribution
+    // 6. Organ Demand Distribution for Bar Chart
     const organDistribution = await Request.aggregate([
       {
         $group: {
@@ -56,28 +63,46 @@ const getDashboardStats = async (req, res) => {
           count: { $sum: 1 }
         }
       },
-      {
-        $sort: { count: -1 }
-      }
+      { $sort: { count: -1 } }
     ]);
+
+    // 7. Recent Insight Panels
+    const recentApprovedHospitals = await Hospital.find({ status: 'approved' })
+      .sort({ approvedAt: -1 })
+      .limit(5)
+      .select('name location.city approvedAt');
+
+    const recentCompletedTransplants = await Transplant.find({ status: 'completed' })
+      .sort({ updatedAt: -1 })
+      .limit(5)
+      .populate('recipient.hospital', 'name')
+      .populate('transportDetails.pickupHospital', 'name');
+
+    // 8. SLA Breaches (Requests pending > 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const slaBreaches = await Request.countDocuments({
+      status: 'pending',
+      createdAt: { $lt: thirtyDaysAgo }
+    });
 
     res.status(200).json({
       success: true,
       data: {
         overview: {
-          totalHospitals,
-          approvedHospitals,
-          pendingHospitals,
-          totalDonors,
-          activeDonors,
-          totalRequests,
-          pendingRequests,
-          totalTransplants,
-          successfulTransplants
+          hospitals: { total: totalHospitals, approved: approvedHospitals, pending: pendingHospitals, suspended: suspendedHospitals },
+          donors: { total: totalDonors },
+          requests: { total: totalRequests, today: requestsToday, month: requestsThisMonth },
+          transplants: { total: totalTransplants, successful: successfulTransplants }
         },
         charts: {
           monthlyTransplants,
           organDistribution
+        },
+        insights: {
+          recentApprovedHospitals,
+          recentCompletedTransplants,
+          slaBreaches
         }
       }
     });
@@ -231,9 +256,68 @@ const getHospitalDetails = async (req, res) => {
       });
     }
 
+    // Get additional stats for hospital
+    const donorCount = await Donor.countDocuments({ registeredHospital: hospital._id });
+    const requestCount = await Request.countDocuments({ hospital: hospital._id });
+
+    // Success Rate calculation
+    const transplantStats = await Transplant.aggregate([
+      {
+        $match: {
+          $or: [
+            { 'recipient.hospital': hospital._id },
+            { 'transportDetails.pickupHospital': hospital._id }
+          ]
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          successful: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ['$status', 'completed'] },
+                    { $eq: ['$outcome.success', true] }
+                  ]
+                },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      }
+    ]);
+
+    const stats = {
+      donorCount,
+      requestCount,
+      transplants: transplantStats[0] || { total: 0, successful: 0 },
+      successRate: transplantStats[0] ? Math.round((transplantStats[0].successful / transplantStats[0].total) * 100) : 0
+    };
+
+    // Activity Timeline (Hospitals + Requests + Transplants)
+    const requests = await Request.find({ hospital: hospital._id }).sort({ createdAt: -1 }).limit(5);
+    const transplants = await Transplant.find({
+      $or: [
+        { 'recipient.hospital': hospital._id },
+        { 'transportDetails.pickupHospital': hospital._id }
+      ]
+    }).sort({ updatedAt: -1 }).limit(5);
+
     res.status(200).json({
       success: true,
-      data: hospital
+      data: {
+        ...hospital._doc,
+        stats,
+        recentActivity: {
+          requests,
+          transplants
+        }
+      }
     });
 
   } catch (error) {
@@ -404,17 +488,18 @@ const getDonors = async (req, res) => {
 // @access  Private (Admin)
 const getRequests = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status, organType, urgency } = req.query;
+    const { page = 1, limit = 10, status, organType, urgency, hospitalId } = req.query;
 
     // Build query
     let query = {};
     if (status) query.status = status;
     if (organType) query.organType = organType;
     if (urgency) query['patient.urgencyLevel'] = urgency;
+    if (hospitalId) query.hospital = hospitalId;
 
     const requests = await Request.find(query)
-      .populate('hospital', 'name location.city')
-      .populate('matchedDonor', 'personalInfo.firstName personalInfo.lastName')
+      .populate('hospital', 'name location.city location.state licenseNumber')
+      .populate('matchedDonor', 'personalInfo medicalInfo')
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -426,7 +511,7 @@ const getRequests = async (req, res) => {
       data: {
         requests,
         pagination: {
-          current: page,
+          current: Number(page),
           pages: Math.ceil(total / limit),
           total
         }
@@ -447,31 +532,53 @@ const getRequests = async (req, res) => {
 // @access  Private (Admin)
 const getTransplants = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status, organType } = req.query;
+    const { page = 1, limit = 10, status, organType, hospitalId } = req.query;
 
     // Build query
     let query = {};
     if (status) query.status = status;
     if (organType) query.organType = organType;
+    if (hospitalId) {
+      query.$or = [
+        { 'recipient.hospital': hospitalId },
+        { 'transportDetails.pickupHospital': hospitalId },
+        { 'transportDetails.deliveryHospital': hospitalId }
+      ];
+    }
 
     const transplants = await Transplant.find(query)
-      .populate('request', 'requestId patient.name')
-      .populate('donor', 'personalInfo.firstName personalInfo.lastName')
-      .populate('recipient.hospital', 'name')
-      .populate('transportDetails.pickupHospital', 'name')
-      .populate('transportDetails.deliveryHospital', 'name')
+      .populate('request', 'requestId patient.name patient.bloodType createdAt')
+      .populate('donor', 'personalInfo medicalInfo location')
+      .populate('recipient.hospital', 'name location')
+      .populate('transportDetails.pickupHospital', 'name location')
+      .populate('transportDetails.deliveryHospital', 'name location')
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
     const total = await Transplant.countDocuments(query);
 
+    // Get stats for transplants
+    const stats = await Transplant.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalCount: { $sum: 1 },
+          successfulCount: {
+            $sum: { $cond: [{ $and: [{ $eq: ['$status', 'completed'] }, { $eq: ['$outcome.success', true] }] }, 1, 0] }
+          },
+          avgDuration: { $avg: '$surgeryDetails.duration' }
+        }
+      }
+    ]);
+
     res.status(200).json({
       success: true,
       data: {
         transplants,
+        stats: stats[0] || { totalCount: 0, successfulCount: 0, avgDuration: 0 },
         pagination: {
-          current: page,
+          current: Number(page),
           pages: Math.ceil(total / limit),
           total
         }
@@ -560,11 +667,20 @@ const getDonorAnalytics = async (req, res) => {
   try {
     const totalDonors = await Donor.countDocuments();
 
+    // 1. By Blood Type
     const byBloodType = await Donor.aggregate([
       { $group: { _id: '$medicalInfo.bloodType', count: { $sum: 1 } } },
       { $sort: { count: -1 } }
     ]);
 
+    // 2. By Organ Type (Unwinding organTypes array)
+    const byOrganType = await Donor.aggregate([
+      { $unwind: '$donationPreferences.organTypes' },
+      { $group: { _id: '$donationPreferences.organTypes', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+
+    // 3. By Hospital
     const byHospital = await Donor.aggregate([
       {
         $lookup: {
@@ -574,14 +690,16 @@ const getDonorAnalytics = async (req, res) => {
           as: 'hospital'
         }
       },
-      { $unwind: '$hospital' },
-      { $group: { _id: '$hospital.name', count: { $sum: 1 } } },
+      { $unwind: { path: '$hospital', preserveNullAndEmptyArrays: true } },
+      { $group: { _id: { $ifNull: ['$hospital.name', 'Unassigned'] }, count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 10 }
     ]);
 
+    // 4. By Location (State)
     const byLocation = await Donor.aggregate([
-      { $group: { _id: '$personalInfo.address.state', count: { $sum: 1 } } },
+      { $group: { _id: '$location.state', count: { $sum: 1 } } },
+      { $match: { _id: { $ne: null } } },
       { $sort: { count: -1 } }
     ]);
 
@@ -590,6 +708,7 @@ const getDonorAnalytics = async (req, res) => {
       data: {
         totalDonors,
         byBloodType,
+        byOrganType,
         byHospital,
         byLocation
       }
@@ -655,8 +774,6 @@ const getHospitalPerformance = async (req, res) => {
   }
 };
 
-// @desc    Get audit logs
-// @route   GET /api/admin/audit
 // @access  Private (Admin)
 const getAuditLogs = async (req, res) => {
   try {
@@ -674,6 +791,102 @@ const getAuditLogs = async (req, res) => {
   }
 };
 
+// @desc    Get system-wide reports for analytics page
+// @route   GET /api/admin/reports/system
+// @access  Private (Admin)
+const getSystemReports = async (req, res) => {
+  try {
+    // 1. Organ Demand vs Availability
+    const demand = await Request.aggregate([
+      { $group: { _id: '$organType', count: { $sum: 1 } } }
+    ]);
+    const availability = await Donor.aggregate([
+      { $unwind: '$donationPreferences.organTypes' },
+      { $group: { _id: '$donationPreferences.organTypes', count: { $sum: 1 } } }
+    ]);
+
+    // 2. Hospital Performance Comparison
+    const hospitalPerformance = await Hospital.aggregate([
+      { $match: { status: 'approved' } },
+      {
+        $lookup: {
+          from: 'transplants',
+          let: { hospitalId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    { $eq: ['$recipient.hospital', '$$hospitalId'] },
+                    { $eq: ['$transportDetails.pickupHospital', '$$hospitalId'] }
+                  ]
+                }
+              }
+            }
+          ],
+          as: 'transplants'
+        }
+      },
+      {
+        $project: {
+          name: 1,
+          totalTransplants: { $size: '$transplants' },
+          successfulTransplants: {
+            $size: {
+              $filter: {
+                input: '$transplants',
+                as: 't',
+                cond: { $and: [{ $eq: ['$$t.status', 'completed'] }, { $eq: ['$$t.outcome.success', true] }] }
+              }
+            }
+          }
+        }
+      },
+      { $sort: { totalTransplants: -1 } },
+      { $limit: 10 }
+    ]);
+
+    // 3. Regional Donor Availability
+    const regionalDonors = await Donor.aggregate([
+      { $group: { _id: '$location.state', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+
+    // 4. Monthly Trends (Combined Requests and Transplants)
+    const currentYear = new Date().getFullYear();
+    const monthlyTrends = await Request.aggregate([
+      {
+        $match: {
+          createdAt: {
+            $gte: new Date(`${currentYear}-01-01`),
+            $lte: new Date(`${currentYear}-12-31`)
+          }
+        }
+      },
+      {
+        $group: {
+          _id: { $month: '$createdAt' },
+          requests: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id': 1 } }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        organComparison: { demand, availability },
+        hospitalPerformance,
+        regionalDonors,
+        monthlyTrends
+      }
+    });
+  } catch (error) {
+    console.error('System reports error:', error);
+    res.status(500).json({ success: false, message: 'Error fetching system reports' });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getHospitals,
@@ -687,5 +900,6 @@ module.exports = {
   getRequests,
   getTransplants,
   getHospitalPerformance,
-  getAuditLogs
+  getAuditLogs,
+  getSystemReports
 };
