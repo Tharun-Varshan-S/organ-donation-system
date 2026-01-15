@@ -12,10 +12,21 @@ import { OrgDemandBar, HospitalPie, MonthlyLine } from './Charts'
 import AdminHospitalCard from './AdminHospitalCard'
 import apiService from '../services/api'
 import './AdminDashboard.css'
-import { useNavigate } from 'react-router-dom'
+import './AdminDashboardEnhancements.css'
+import { useNavigate, useLocation } from 'react-router-dom'
+
+const StatCardSkeleton = () => (
+  <div className="stat-card skeleton" style={{ minHeight: '100px' }}></div>
+)
+
+const TableRowSkeleton = () => (
+  <tr className="skeleton-table-row-animate">
+    <td colSpan="5"><div className="skeleton" style={{ height: '24px', margin: '8px 0' }}></div></td>
+  </tr>
+)
 
 const StatCard = ({ icon: Icon, label, value, bgColor, subValue }) => (
-  <div className="stat-card transition-all hover:scale-[1.02] hover:shadow-lg">
+  <div className="stat-card transition-all">
     <div className="stat-icon" style={{ backgroundColor: bgColor }}>
       <Icon size={24} color="white" />
     </div>
@@ -23,7 +34,7 @@ const StatCard = ({ icon: Icon, label, value, bgColor, subValue }) => (
       <p className="stat-label">{label}</p>
       <div className="flex items-baseline gap-2">
         <p className="stat-value">{value}</p>
-        {subValue && <p className="text-xs text-[#6b7280] font-medium opacity-80">{subValue}</p>}
+        {subValue && <p className="text-xs text-[#64748b] font-medium opacity-80">{subValue}</p>}
       </div>
     </div>
   </div>
@@ -38,14 +49,30 @@ const DashboardSection = ({ dashboardStats, hospitalData, setCurrentPage, loadin
   const insights = dashboardStats.insights || {}
   const charts = dashboardStats.charts || {}
 
+  if (loading && !dashboardStats.overview) {
+    return (
+      <div className="dashboard-content dashboard-command-center">
+        <div className="flex justify-between items-center mb-6">
+          <div className="skeleton" style={{ height: '32px', width: '250px' }}></div>
+        </div>
+        <div className="stats-grid">
+          {[1, 2, 3, 4].map(i => <StatCardSkeleton key={i} />)}
+        </div>
+        <div className="insights-grid">
+          <div className="insight-panel skeleton" style={{ height: '350px' }}></div>
+          <div className="insight-panel skeleton" style={{ height: '350px' }}></div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="dashboard-content dashboard-command-center">
       {error && <div className="error-message">{error}</div>}
-      {loading && !dashboardStats.overview && <div className="loading-skeleton-grid">Loading...</div>}
 
       <div className="flex justify-between items-center mb-6">
         <h2 className="section-title mb-0">System Command Center</h2>
-        <div className="text-xs text-[#6b7280] bg-white/50 px-3 py-1.5 rounded-full border border-gray-200 flex items-center gap-2">
+        <div className="text-xs text-[#64748b] bg-white/50 px-3 py-1.5 rounded-full border border-gray-200 flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
           Real-time monitoring active
         </div>
@@ -83,19 +110,21 @@ const DashboardSection = ({ dashboardStats, hospitalData, setCurrentPage, loadin
       </div>
 
       <div className="insights-grid">
-        <div className="insight-panel charts-panel">
+        <div className="insight-panel charts-panel card-hover-shadow">
           <div className="chart-header flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold text-[#1f2937]">System Trends</h3>
-            <div className="flex gap-2 text-xs text-[#6b7280]">
+            <div className="flex gap-2 text-xs text-[#64748b]">
               <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#3b82f6]"></div> Transplants</span>
             </div>
           </div>
-          <MonthlyLine data={charts.monthlyTransplants || []} />
+          <div className="animate-chart-load">
+            <MonthlyLine data={charts.monthlyTransplants || []} />
+          </div>
         </div>
 
-        <div className="insight-panel recent-panel">
+        <div className="insight-panel recent-panel card-hover-shadow">
           <h3 className="text-lg font-bold text-[#1f2937] mb-4">Urgent Insights</h3>
-          <div className="sla-alert p-4 bg-red-50 border border-red-100 rounded-xl mb-4">
+          <div className="sla-alert p-4 bg-red-50 border border-red-100 rounded-xl mb-4 transition-all hover:bg-red-100">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-red-100 text-red-600 rounded-lg"><AlertCircle size={20} /></div>
               <div>
@@ -111,19 +140,19 @@ const DashboardSection = ({ dashboardStats, hospitalData, setCurrentPage, loadin
               <div key={h._id} className="recent-item flex justify-between items-center p-2 hover:bg-black/5 rounded-lg transition-all border-b border-gray-100 last:border-0">
                 <div>
                   <p className="text-sm font-semibold text-[#1f2937]">{h.name}</p>
-                  <p className="text-xs text-[#6b7280]">{h.location?.city}</p>
+                  <p className="text-xs text-[#64748b]">{h.location?.city}</p>
                 </div>
-                <p className="text-[10px] text-[#9ca3af]">{new Date(h.approvedAt).toLocaleDateString()}</p>
+                <p className="text-[10px] text-[#94a3b8]">{new Date(h.approvedAt).toLocaleDateString()}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="section mt-8">
+      <div className="section mt-8 card-hover-shadow">
         <div className="flex justify-between items-center mb-4">
           <h2 className="section-title mb-0">Key Hospitals Performance</h2>
-          <button className="text-sm text-[#3b82f6] font-medium hover:underline" onClick={() => setCurrentPage('hospitals')}>View All</button>
+          <button className="text-sm text-[#3b82f6] font-semibold hover:underline transition-all" onClick={() => setCurrentPage('hospitals')}>View All</button>
         </div>
         <div className="table-wrapper">
           <table className="admin-table">
@@ -138,15 +167,15 @@ const DashboardSection = ({ dashboardStats, hospitalData, setCurrentPage, loadin
             </thead>
             <tbody>
               {hospitalData.slice(0, 5).map(hospital => (
-                <tr key={hospital._id} className="hover:bg-gray-50/50 cursor-pointer" onClick={() => setCurrentPage('hospitals')}>
-                  <td className="hospital-name">{hospital.name}</td>
-                  <td>{hospital.location?.city}, {hospital.location?.state}</td>
+                <tr key={hospital._id} className="cursor-pointer" onClick={() => setCurrentPage('hospitals')}>
+                  <td className="hospital-name font-bold">{hospital.name}</td>
+                  <td className="text-gray-600">{hospital.location?.city}, {hospital.location?.state}</td>
                   <td>
                     <span className={`status-badge status-${hospital.status}`}>
                       {hospital.status.charAt(0).toUpperCase() + hospital.status.slice(1)}
                     </span>
                   </td>
-                  <td>{new Date(hospital.updatedAt).toLocaleTimeString()}</td>
+                  <td className="text-gray-500 tabular-nums">{new Date(hospital.updatedAt).toLocaleTimeString()}</td>
                   <td>
                     <HospitalPie data={[{ name: 'Matched', value: (hospital.successRate || 70) }, { name: 'Open', value: 100 - (hospital.successRate || 70) }]} />
                   </td>
@@ -165,7 +194,6 @@ const HospitalsSection = ({
 }) => (
   <div className="dashboard-content">
     {error && <div className="error-message">{error}</div>}
-    {loading && <div className="loading-message">Loading Hospitals...</div>}
 
     <h2 className="section-title">Hospitals Dashboard</h2>
 
@@ -202,44 +230,52 @@ const HospitalsSection = ({
       </div>
     )}
 
-    {activeTab === 'region' && !filters.state && (
-      <div className="region-grid">
-        {hospitalStats.regionStats?.map(region => (
-          <div key={region._id} className="region-card" onClick={() => handleFilterChange('state', region._id)}>
-            <div className="region-header">
-              <span className="region-name">{region._id}</span>
-              <span className="region-total">{region.totalHospitals}</span>
-            </div>
-            <div className="region-stats">
-              <div className="region-stat-item"><span>Approved</span><span className="region-stat-value">{region.approvedHospitals}</span></div>
-              <div className="region-stat-item"><span>Pending</span><span className="region-stat-value">{region.totalHospitals - region.approvedHospitals}</span></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    )}
-
-    {activeTab === 'specialization' && !filters.specialization && (
-      <div className="spec-grid">
-        {hospitalStats.specializationStats?.map(spec => (
-          <div key={spec._id} className="spec-card" onClick={() => handleFilterChange('specialization', spec._id)}>
-            <div className="spec-icon"><Heart size={24} /></div>
-            <span className="spec-name">{spec._id}</span>
-            <span className="spec-count">{spec.count} Hospitals</span>
-          </div>
-        ))}
-      </div>
-    )}
-
-    {(activeTab === 'all' || activeTab === 'emergency' || (activeTab === 'region' && filters.state) || (activeTab === 'specialization' && filters.specialization)) && (
+    {loading ? (
       <div className="hospitals-list-container">
-        {hospitalData.map(hospital => (
-          <div key={hospital._id} onClick={() => onHospitalClick && onHospitalClick(hospital._id)}>
-            <AdminHospitalCard hospital={hospital} />
-          </div>
-        ))}
-        {hospitalData.length === 0 && <div className="no-data-message">No hospitals matching filters.</div>}
+        {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="skeleton" style={{ height: '300px', borderRadius: '16px' }}></div>)}
       </div>
+    ) : (
+      <>
+        {activeTab === 'region' && !filters.state && (
+          <div className="region-grid">
+            {hospitalStats.regionStats?.map(region => (
+              <div key={region._id} className="region-card" onClick={() => handleFilterChange('state', region._id)}>
+                <div className="region-header">
+                  <span className="region-name">{region._id}</span>
+                  <span className="region-total">{region.totalHospitals}</span>
+                </div>
+                <div className="region-stats">
+                  <div className="region-stat-item"><span>Approved</span><span className="region-stat-value">{region.approvedHospitals}</span></div>
+                  <div className="region-stat-item"><span>Pending</span><span className="region-stat-value">{region.totalHospitals - region.approvedHospitals}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'specialization' && !filters.specialization && (
+          <div className="spec-grid">
+            {hospitalStats.specializationStats?.map(spec => (
+              <div key={spec._id} className="spec-card" onClick={() => handleFilterChange('specialization', spec._id)}>
+                <div className="spec-icon"><Heart size={24} /></div>
+                <span className="spec-name">{spec._id}</span>
+                <span className="spec-count">{spec.count} Hospitals</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {(activeTab === 'all' || activeTab === 'emergency' || (activeTab === 'region' && filters.state) || (activeTab === 'specialization' && filters.specialization)) && (
+          <div className="hospitals-list-container">
+            {hospitalData.map(hospital => (
+              <div key={hospital._id} onClick={() => onHospitalClick && onHospitalClick(hospital._id)}>
+                <AdminHospitalCard hospital={hospital} />
+              </div>
+            ))}
+            {hospitalData.length === 0 && <div className="no-data-message">No hospitals matching filters.</div>}
+          </div>
+        )}
+      </>
     )}
   </div>
 )
@@ -247,29 +283,34 @@ const HospitalsSection = ({
 const HospitalRequestsSection = ({ hospitalData, handleApprove, handleReject, dashboardStats, loading, error }) => (
   <div className="dashboard-content">
     {error && <div className="error-message">{error}</div>}
-    {loading && <div className="loading-message">Loading Requests...</div>}
 
     <div className="flex justify-between items-center mb-6">
       <h2 className="section-title mb-0">Hospital Registration Requests</h2>
-      <div className="bg-white/50 px-4 py-2 rounded-lg text-[#556B73] font-medium border border-[#798E93]/20">
-        Total Pending: <span className="text-red-600 font-bold">{dashboardStats.pendingHospitals || 0}</span>
+      <div className="bg-white/50 px-4 py-2 rounded-lg text-[#556B73] font-bold border border-[#798E93]/20">
+        Total Pending: <span className="text-red-600">{dashboardStats.pendingHospitals || 0}</span>
       </div>
     </div>
 
     <div className="hospitals-list-container">
-      {hospitalData.map(hospital => (
-        <AdminHospitalCard
-          key={hospital._id}
-          hospital={hospital}
-          onApprove={handleApprove}
-          onReject={handleReject}
-        />
-      ))}
-      {hospitalData.length === 0 && (
-        <div className="no-data-message text-center py-12 bg-white/30 rounded-xl">
-          <FileText className="w-12 h-12 text-[#798E93] mx-auto mb-4 opacity-50" />
-          <p className="text-lg text-[#556B73]">No pending hospital requests.</p>
-        </div>
+      {loading ? (
+        [1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: '300px', borderRadius: '16px' }}></div>)
+      ) : (
+        <>
+          {hospitalData.map(hospital => (
+            <AdminHospitalCard
+              key={hospital._id}
+              hospital={hospital}
+              onApprove={handleApprove}
+              onReject={handleReject}
+            />
+          ))}
+          {hospitalData.length === 0 && (
+            <div className="no-data-message text-center py-12 bg-white/30 rounded-xl">
+              <FileText className="w-12 h-12 text-[#798E93] mx-auto mb-4 opacity-50" />
+              <p className="text-lg text-[#556B73]">No pending hospital requests.</p>
+            </div>
+          )}
+        </>
       )}
     </div>
   </div>
@@ -294,31 +335,44 @@ const DonorsSection = ({ apiService }) => {
     fetchAnalytics()
   }, [apiService])
 
-  if (loadingAnalytics) return <div className="loading-message">Loading Donor Analytics...</div>
+  if (loadingAnalytics) {
+    return (
+      <div className="dashboard-content">
+        <div className="skeleton" style={{ height: '40px', width: '300px', marginBottom: '32px' }}></div>
+        <div className="grid grid-cols-4 gap-6 mb-8">
+          {[1, 2, 3, 4].map(i => <div key={i} className="skeleton" style={{ height: '120px', borderRadius: '16px' }}></div>)}
+        </div>
+        <div className="grid grid-cols-2 gap-8">
+          <div className="skeleton" style={{ height: '300px', borderRadius: '16px' }}></div>
+          <div className="skeleton" style={{ height: '300px', borderRadius: '16px' }}></div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="dashboard-content donor-analytics-page">
       <h2 className="section-title">Donor Ecosystem Analytics</h2>
 
       <div className="donor-summary-grid grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="analytics-card p-6 bg-white rounded-2xl border border-gray-100 shadow-sm transition-all hover:border-blue-200">
+        <div className="analytics-card p-6 bg-white rounded-2xl border border-gray-100 shadow-sm transition-all hover:border-blue-200 hover:shadow-md">
           <p className="text-sm font-bold text-[#64748b] mb-1">Total Network Donors</p>
           <p className="text-3xl font-black text-[#1e293b]">{donorAnalytics?.totalDonors || 0}</p>
           <div className="mt-2 flex items-center gap-1 text-[#10b981] text-xs font-bold">
             <TrendingUp size={14} /> +12% growth
           </div>
         </div>
-        <div className="analytics-card p-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <div className="analytics-card p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
           <p className="text-sm font-bold text-[#64748b] mb-1">Critical Blood Types</p>
           <p className="text-3xl font-black text-red-600">{donorAnalytics?.byBloodType?.length || 0}</p>
           <p className="text-[10px] text-[#94a3b8] mt-2">Diversity metric active</p>
         </div>
-        <div className="analytics-card p-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <div className="analytics-card p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
           <p className="text-sm font-bold text-[#64748b] mb-1">Active Regions</p>
           <p className="text-3xl font-black text-[#3b82f6]">{donorAnalytics?.byLocation?.length || 0}</p>
           <p className="text-[10px] text-[#94a3b8] mt-2">Verified jurisdictional data</p>
         </div>
-        <div className="analytics-card p-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <div className="analytics-card p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
           <p className="text-sm font-bold text-[#64748b] mb-1">Hospital Partners</p>
           <p className="text-3xl font-black text-[#8b5cf6]">{donorAnalytics?.byHospital?.length || 0}</p>
           <p className="text-[10px] text-[#94a3b8] mt-2">Linked medical centers</p>
@@ -326,7 +380,7 @@ const DonorsSection = ({ apiService }) => {
       </div>
 
       <div className="analytics-charts-grid grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <div className="analytics-panel p-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <div className="analytics-panel p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
           <h3 className="text-md font-bold text-[#1e293b] mb-6 flex items-center gap-2">
             <Heart size={18} className="text-red-500" /> Donors by Blood Group
           </h3>
@@ -341,7 +395,7 @@ const DonorsSection = ({ apiService }) => {
           </ResponsiveContainer>
         </div>
 
-        <div className="analytics-panel p-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <div className="analytics-panel p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
           <h3 className="text-md font-bold text-[#1e293b] mb-6 flex items-center gap-2">
             <Map size={18} className="text-blue-500" /> Regional Distribution
           </h3>
@@ -358,21 +412,21 @@ const DonorsSection = ({ apiService }) => {
       </div>
 
       <div className="analytics-charts-grid grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <div className="analytics-panel p-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <div className="analytics-panel p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
           <h3 className="text-md font-bold text-[#1e293b] mb-6 flex items-center gap-2">
             <Grid size={18} className="text-purple-500" /> Donors by Organ Type
           </h3>
           <div className="flex flex-wrap gap-4">
             {donorAnalytics?.byOrganType?.map((o, idx) => (
-              <div key={idx} className="organ-pill flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 flex-1 min-w-[140px]">
+              <div key={idx} className="organ-pill flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 flex-1 min-w-[140px] hover:bg-white transition-all">
                 <div className={`w-2 h-8 rounded-full ${['bg-red-400', 'bg-blue-400', 'bg-green-400', 'bg-amber-400'][idx % 4]}`}></div>
-                <div><p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{o._id}</p><p className="text-lg font-bold text-gray-800">{o.count}</p></div>
+                <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{o._id}</p><p className="text-lg font-bold text-gray-800">{o.count}</p></div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="insights-panel p-6 bg-gray-900 rounded-2xl text-white">
+        <div className="insights-panel p-6 bg-[#0f172a] rounded-2xl text-white shadow-lg border border-white/5">
           <h3 className="text-md font-bold mb-6 flex items-center gap-2"><Info size={18} className="text-amber-400" /> Systemic Insights</h3>
           <div className="space-y-4">
             <div className="insight-item flex gap-4"><div className="h-2 w-2 rounded-full bg-amber-400 mt-1.5 shrink-0"></div><p className="text-sm text-gray-300">Waitlist optimization possible in <span className="text-white font-bold">{donorAnalytics?.byLocation?.[0]?._id}</span>.</p></div>
@@ -384,7 +438,7 @@ const DonorsSection = ({ apiService }) => {
   )
 }
 
-const OrganRequestsSection = ({ requestData, setCurrentPage }) => {
+const OrganRequestsSection = ({ requestData, setCurrentPage, loading }) => {
   const urgencyScore = (urgency) => {
     const map = { critical: 'bg-red-500', high: 'bg-orange-500', medium: 'bg-yellow-500', low: 'bg-blue-500' }
     return map[urgency?.toLowerCase()] || 'bg-gray-400'
@@ -401,44 +455,48 @@ const OrganRequestsSection = ({ requestData, setCurrentPage }) => {
       </div>
 
       <div className="requests-grid grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {requestData.map(request => (
-          <div key={request._id} className="request-card p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-            <div className="flex justify-between items-start mb-6">
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-lg ${urgencyScore(request.urgency)}`}>{request.organType?.charAt(0)}</div>
-                <div><h3 className="font-black text-[#1e293b] text-lg uppercase">{request.organType}</h3><p className="text-xs font-bold text-[#64748b]">#REQ-{request._id.slice(-6).toUpperCase()}</p></div>
+        {loading ? (
+          [1, 2, 3, 4].map(i => <div key={i} className="skeleton" style={{ height: '240px', borderRadius: '20px' }}></div>)
+        ) : (
+          requestData.map(request => (
+            <div key={request._id} className="request-card p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg ${urgencyScore(request.urgency)}`}>{request.organType?.charAt(0)}</div>
+                  <div><h3 className="font-black text-[#1e293b] text-lg uppercase">{request.organType}</h3><p className="text-xs font-bold text-[#64748b]">#REQ-{request._id.slice(-6).toUpperCase()}</p></div>
+                </div>
+                <div className="text-right">
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${request.priority === 'urgent' ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'}`}>{request.priority || 'standard'} PRIORITY</span>
+                  <p className="mt-1 text-[10px] text-[#94a3b8] font-bold flex items-center justify-end gap-1"><Clock size={10} /> {new Date(request.createdAt).toLocaleDateString()}</p>
+                </div>
               </div>
-              <div className="text-right">
-                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${request.priority === 'urgent' ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'}`}>{request.priority || 'standard'} PRIORITY</span>
-                <p className="mt-1 text-[10px] text-[#94a3b8] font-bold flex items-center justify-end gap-1"><Clock size={10} /> {new Date(request.createdAt).toLocaleDateString()}</p>
+              <div className="request-details-grid grid grid-cols-3 gap-4 mb-6">
+                <div className="detail-item bg-[#f8fafc] p-3 rounded-xl border border-[#f1f5f9]">
+                  <p className="text-[10px] font-bold text-[#94a3b8] uppercase mb-1">Blood Type</p>
+                  <p className="text-sm font-black text-[#1e293b]">{request.bloodType || 'N/A'}</p>
+                </div>
+                <div className="detail-item bg-[#f8fafc] p-3 rounded-xl border border-[#f1f5f9] col-span-2">
+                  <p className="text-[10px] font-bold text-[#94a3b8] uppercase mb-1">Requested By</p>
+                  <p className="text-sm font-black text-[#1e293b] truncate">{request.hospital?.name || 'Unknown'}</p>
+                </div>
+              </div>
+              <div className="hospital-locator mb-6 flex items-center gap-3 p-3 bg-blue-50/50 rounded-xl border border-blue-100/50">
+                <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><Map size={16} /></div>
+                <div><p className="text-[10px] font-bold text-blue-800 uppercase">Location</p><p className="text-xs font-bold text-blue-600">{request.hospital?.location?.city || 'City N/A'}</p></div>
+              </div>
+              <div className="action-row flex items-center gap-3">
+                <button className="flex-1 bg-[#1e293b] text-white py-3 rounded-xl text-xs font-black uppercase hover:bg-black transition-all" onClick={() => setCurrentPage('hospitals')}>Profile</button>
+                <button className="w-12 h-12 flex items-center justify-center bg-gray-100 text-[#64748b] rounded-xl hover:bg-gray-200 transition-all"><Info size={18} /></button>
               </div>
             </div>
-            <div className="request-details-grid grid grid-cols-3 gap-4 mb-6">
-              <div className="detail-item bg-[#f8fafc] p-3 rounded-xl border border-[#f1f5f9]">
-                <p className="text-[10px] font-bold text-[#94a3b8] uppercase mb-1">Blood Type</p>
-                <p className="text-sm font-black text-[#1e293b]">{request.bloodType || 'N/A'}</p>
-              </div>
-              <div className="detail-item bg-[#f8fafc] p-3 rounded-xl border border-[#f1f5f9] col-span-2">
-                <p className="text-[10px] font-bold text-[#94a3b8] uppercase mb-1">Requested By</p>
-                <p className="text-sm font-black text-[#1e293b] truncate">{request.hospital?.name || 'Unknown'}</p>
-              </div>
-            </div>
-            <div className="hospital-locator mb-6 flex items-center gap-3 p-3 bg-blue-50/50 rounded-xl border border-blue-100/50">
-              <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><Map size={16} /></div>
-              <div><p className="text-[10px] font-bold text-blue-800 uppercase">Location</p><p className="text-xs font-bold text-blue-600">{request.hospital?.location?.city || 'City N/A'}</p></div>
-            </div>
-            <div className="action-row flex items-center gap-3">
-              <button className="flex-1 bg-[#1e293b] text-white py-3 rounded-xl text-xs font-black uppercase hover:bg-black transition-all" onClick={() => setCurrentPage('hospitals')}>Profile</button>
-              <button className="w-12 h-12 flex items-center justify-center bg-gray-100 text-[#64748b] rounded-xl hover:bg-gray-200 transition-all"><Info size={18} /></button>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   )
 }
 
-const TransplantsSection = ({ transplantData }) => (
+const TransplantsSection = ({ transplantData, loading }) => (
   <div className="dashboard-content">
     <h2 className="section-title">Transplant Records</h2>
     <div className="table-wrapper">
@@ -447,17 +505,21 @@ const TransplantsSection = ({ transplantData }) => (
           <tr><th>ID</th><th>Organ</th><th>From</th><th>To</th><th>Date</th><th>Status</th></tr>
         </thead>
         <tbody>
-          {transplantData.length > 0 ? transplantData.map(t => (
-            <tr key={t._id}>
-              <td>#{t.transplantId}</td>
-              <td className="font-bold">{t.organType}</td>
-              <td>{t.donor?.registeredHospital?.name || 'N/A'}</td>
-              <td>{t.recipient?.hospital?.name || 'N/A'}</td>
-              <td>{new Date(t.createdAt).toLocaleDateString()}</td>
-              <td><span className="status-badge status-approved">{t.status}</span></td>
-            </tr>
-          )) : (
-            <tr><td colSpan="6" className="text-center py-8">No transplant records found.</td></tr>
+          {loading ? (
+            [1, 2, 3, 4, 5].map(i => <TableRowSkeleton key={i} />)
+          ) : (
+            transplantData.length > 0 ? transplantData.map(t => (
+              <tr key={t._id}>
+                <td>#{t.transplantId}</td>
+                <td className="font-bold">{t.organType}</td>
+                <td>{t.donor?.registeredHospital?.name || 'N/A'}</td>
+                <td>{t.recipient?.hospital?.name || 'N/A'}</td>
+                <td>{new Date(t.createdAt).toLocaleDateString()}</td>
+                <td><span className="status-badge status-approved">{t.status}</span></td>
+              </tr>
+            )) : (
+              <tr><td colSpan="6" className="text-center py-8">No transplant records found.</td></tr>
+            )
           )}
         </tbody>
       </table>
@@ -484,32 +546,39 @@ const ReportsSection = ({ apiService, dashboardStats }) => {
     fetchReports()
   }, [apiService])
 
-  if (loadingReports) return <div className="loading-message">Synthesizing Reports...</div>
+  if (loadingReports) {
+    return (
+      <div className="dashboard-content">
+        <div className="skeleton" style={{ height: '300px', borderRadius: '24px', marginBottom: '40px' }}></div>
+        <div className="skeleton" style={{ height: '400px', borderRadius: '24px' }}></div>
+      </div>
+    )
+  }
 
   return (
     <div className="dashboard-content system-reports-page space-y-12 pb-20">
-      <div className="reports-hero bg-gradient-to-r from-[#1e293b] to-[#334155] p-10 rounded-3xl text-white relative overflow-hidden">
+      <div className="reports-hero bg-gradient-to-r from-[#0f172a] to-[#1e293b] p-10 rounded-3xl text-white relative overflow-hidden shadow-2xl">
         <div className="relative z-10">
-          <h2 className="text-4xl font-black mb-2">Annual Performance</h2>
+          <h2 className="text-4xl font-black mb-2 tracking-tight">Annual Performance</h2>
           <div className="flex gap-8 mt-8">
-            <div className="report-stat"><p className="text-[10px] uppercase font-bold text-blue-300">Centers</p><p className="text-2xl font-black">{dashboardStats.overview?.hospitals?.total || 0}</p></div>
-            <div className="report-stat border-l border-white/10 pl-8"><p className="text-[10px] uppercase font-bold text-blue-300">Success Rate</p><p className="text-2xl font-black">94.2%</p></div>
+            <div className="report-stat"><p className="text-[10px] uppercase font-bold text-blue-300 tracking-widest">Centers</p><p className="text-2xl font-black">{dashboardStats.overview?.hospitals?.total || 0}</p></div>
+            <div className="report-stat border-l border-white/10 pl-8"><p className="text-[10px] uppercase font-bold text-blue-300 tracking-widest">Success Rate</p><p className="text-2xl font-black">94.2%</p></div>
           </div>
         </div>
         <BarChart3 className="absolute right-[-20px] bottom-[-20px] w-64 h-64 text-white/5 rotate-12" />
       </div>
 
       <section className="report-section">
-        <div className="section-header flex items-center gap-3 mb-6"><div className="w-1.5 h-8 bg-blue-600 rounded-full"></div><h3 className="text-2xl font-black">The Match Gap</h3></div>
+        <div className="section-header flex items-center gap-3 mb-6"><div className="w-1.5 h-8 bg-blue-600 rounded-full"></div><h3 className="text-2xl font-black tracking-tight text-[#1e293b]">The Match Gap</h3></div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-gray-100 shadow-sm"><OrgDemandBar data={reportData?.organComparison?.demand || []} /></div>
+          <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all"><OrgDemandBar data={reportData?.organComparison?.demand || []} /></div>
           <div className="space-y-4">
             {reportData?.organComparison?.demand?.slice(0, 4).map((d, i) => {
               const avail = reportData?.organComparison?.availability?.find(a => a._id === d._id)?.count || 0
               const gap = d.count - avail
               return (
-                <div key={i} className="gap-card p-5 bg-white rounded-2xl border border-gray-100">
-                  <div className="flex justify-between items-center mb-2"><span className="font-bold">{d._id}</span><span className={`text-[10px] font-black px-2 py-0.5 rounded ${gap > 0 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{gap > 0 ? 'Shortage' : 'Surplus'}</span></div>
+                <div key={i} className="gap-card p-5 bg-white rounded-2xl border border-gray-100 hover:shadow-md transition-all">
+                  <div className="flex justify-between items-center mb-2"><span className="font-bold text-[#1e293b]">{d._id}</span><span className={`text-[10px] font-black px-2 py-0.5 rounded ${gap > 0 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{gap > 0 ? 'Shortage' : 'Surplus'}</span></div>
                   <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden"><div className="bg-blue-600 h-full" style={{ width: `${(avail / (d.count || 1)) * 100}%` }}></div></div>
                 </div>
               )
@@ -519,17 +588,17 @@ const ReportsSection = ({ apiService, dashboardStats }) => {
       </section>
 
       <section className="report-section">
-        <div className="section-header flex items-center gap-3 mb-6"><div className="w-1.5 h-8 bg-green-600 rounded-full"></div><h3 className="text-2xl font-black text-[#1e293b]">Partner Excellence</h3></div>
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="section-header flex items-center gap-3 mb-6"><div className="w-1.5 h-8 bg-green-600 rounded-full"></div><h3 className="text-2xl font-black tracking-tight text-[#1e293b]">Partner Excellence</h3></div>
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all">
           <table className="w-full text-left">
-            <thead className="bg-gray-50 border-b border-gray-100"><tr><th className="px-8 py-4 text-xs font-black uppercase">Rank</th><th className="px-8 py-4 text-xs font-black uppercase">Hospital</th><th className="px-8 py-4 text-xs font-black uppercase">Transplants</th><th className="px-8 py-4 text-xs font-black uppercase">Success Rate</th></tr></thead>
+            <thead className="bg-[#f8fafc] border-b border-gray-100"><tr><th className="px-8 py-4 text-xs font-black uppercase text-[#64748b] tracking-wider">Rank</th><th className="px-8 py-4 text-xs font-black uppercase text-[#64748b] tracking-wider">Hospital</th><th className="px-8 py-4 text-xs font-black uppercase text-[#64748b] tracking-wider">Transplants</th><th className="px-8 py-4 text-xs font-black uppercase text-[#64748b] tracking-wider">Success Rate</th></tr></thead>
             <tbody>
               {reportData?.hospitalPerformance?.map((h, i) => (
                 <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
                   <td className="px-8 py-5 font-black text-[#64748b]">#{i + 1}</td>
-                  <td className="px-8 py-5 font-bold">{h.name}</td>
-                  <td className="px-8 py-5 font-black text-[#3b82f6]">{h.totalTransplants}</td>
-                  <td className="px-8 py-5"><div className="flex items-center gap-3"><span className="font-bold">{((h.successfulTransplants / h.totalTransplants) * 100 || 0).toFixed(1)}%</span><div className="w-16 h-1 bg-gray-100 rounded-full"><div className="bg-green-500 h-full" style={{ width: `${(h.successfulTransplants / h.totalTransplants) * 100}%` }}></div></div></div></td>
+                  <td className="px-8 py-5 font-bold text-[#1e293b]">{h.name}</td>
+                  <td className="px-8 py-5 font-black text-[#3b82f6] tabular-nums">{h.totalTransplants}</td>
+                  <td className="px-8 py-5"><div className="flex items-center gap-3"><span className="font-bold text-[#1e293b] tabular-nums">{((h.successfulTransplants / h.totalTransplants) * 100 || 0).toFixed(1)}%</span><div className="w-16 h-1 bg-gray-100 rounded-full"><div className="bg-green-500 h-full" style={{ width: `${(h.successfulTransplants / h.totalTransplants) * 100}%` }}></div></div></div></td>
                 </tr>
               ))}
             </tbody>
@@ -546,18 +615,18 @@ const SettingsSection = () => {
     <div className="dashboard-content settings-portal">
       <h2 className="section-title mb-8">System Configuration</h2>
       <div className="settings-container bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex min-h-[500px]">
-        <aside className="w-64 bg-gray-50 border-r border-gray-100 p-6">
+        <aside className="w-64 bg-[#f8fafc] border-r border-gray-100 p-6">
           <nav className="space-y-2">
             {[{ id: 'profile', label: 'Profile', icon: User }, { id: 'security', label: 'Security', icon: AlertCircle }, { id: 'notifications', label: 'Alerts', icon: Bell }, { id: 'rules', label: 'Rules', icon: FileText }].map(tab => (
-              <button key={tab.id} onClick={() => setSettingsTab(tab.id)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${settingsTab === tab.id ? 'bg-[#1e293b] text-white' : 'text-[#64748b] hover:bg-gray-200'}`}><tab.icon size={18} /> {tab.label}</button>
+              <button key={tab.id} onClick={() => setSettingsTab(tab.id)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${settingsTab === tab.id ? 'bg-[#0f172a] text-white shadow-lg' : 'text-[#64748b] hover:bg-gray-200'}`}><tab.icon size={18} /> {tab.label}</button>
             ))}
           </nav>
         </aside>
-        <main className="flex-1 p-10">
-          {settingsTab === 'profile' && <div className="settings-view"><h3 className="text-xl font-black mb-6">Admin Profile</h3><div className="space-y-6 max-w-md"><div className="field-group"><label className="text-[10px] uppercase font-black text-[#94a3b8] block">Global Administrator</label><input type="text" readOnly value="System Administrator" className="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-bold" /></div></div></div>}
-          {settingsTab === 'security' && <div className="settings-view"><h3 className="text-xl font-black mb-6">Security Credentials</h3><div className="space-y-6 max-w-md"><div className="field-group"><label className="text-[10px] uppercase font-black text-[#94a3b8] block">Current Password</label><input type="password" placeholder="••••••••" className="w-full bg-white border-gray-200 rounded-xl px-4 py-3 text-sm font-bold" /></div><button className="bg-[#1e293b] text-white px-8 py-3 rounded-xl font-black text-xs uppercase hover:bg-black">Update</button></div></div>}
-          {settingsTab === 'notifications' && <div className="settings-view"><h3 className="text-xl font-black mb-6">Notifications</h3><div className="space-y-4">{[{ label: 'Hospital Requests', desc: 'Alert for new hospitals' }, { label: 'Critical Matches', desc: 'Real-time alerts' }].map((item, i) => (<div key={i} className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100"><div><p className="font-bold text-sm">{item.label}</p><p className="text-xs text-[#94a3b8]">{item.desc}</p></div><div className="w-12 h-6 bg-blue-600 rounded-full relative cursor-pointer"><div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div></div></div>))}</div></div>}
-          {settingsTab === 'rules' && <div className="settings-view"><h3 className="text-xl font-black mb-6">System Rules</h3><div className="prose prose-sm"><p className="text-xs">Standard Operating Procedures are enforced system-wide.</p></div></div>}
+        <main className="flex-1 p-10 bg-white">
+          {settingsTab === 'profile' && <div className="settings-view"><h3 className="text-xl font-black mb-6 text-[#1e293b]">Admin Profile</h3><div className="space-y-6 max-w-md"><div className="field-group"><label className="text-[10px] uppercase font-black text-[#94a3b8] block tracking-widest mb-2">Global Administrator</label><input type="text" readOnly value="System Administrator" className="w-full bg-[#f8fafc] border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-[#1e293b]" /></div></div></div>}
+          {settingsTab === 'security' && <div className="settings-view"><h3 className="text-xl font-black mb-6 text-[#1e293b]">Security Credentials</h3><div className="space-y-6 max-w-md"><div className="field-group"><label className="text-[10px] uppercase font-black text-[#94a3b8] block tracking-widest mb-2">Current Password</label><input type="password" placeholder="••••••••" className="w-full bg-white border-gray-200 rounded-xl px-4 py-3 text-sm font-bold" /></div><button className="bg-[#0f172a] text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all">Update Credentials</button></div></div>}
+          {settingsTab === 'notifications' && <div className="settings-view"><h3 className="text-xl font-black mb-6 text-[#1e293b]">Notification Center</h3><div className="space-y-4">{[{ label: 'Hospital Requests', desc: 'Alert for new hospitals' }, { label: 'Critical Matches', desc: 'Real-time alerts' }].map((item, i) => (<div key={i} className="flex justify-between items-center p-4 bg-[#f8fafc] rounded-2xl border border-gray-100 hover:border-blue-100 transition-all"><div><p className="font-bold text-sm text-[#1e293b]">{item.label}</p><p className="text-xs text-[#94a3b8] font-medium">{item.desc}</p></div><div className="w-12 h-6 bg-blue-600 rounded-full relative cursor-pointer"><div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm"></div></div></div>))}</div></div>}
+          {settingsTab === 'rules' && <div className="settings-view"><h3 className="text-xl font-black mb-6 text-[#1e293b]">System Protocols</h3><div className="prose prose-sm"><p className="text-sm text-[#475569] leading-relaxed">Standard Operating Procedures are enforced system-wide to ensure medical compliance and donor safety.</p></div></div>}
         </main>
       </div>
     </div>
@@ -566,7 +635,8 @@ const SettingsSection = () => {
 
 const AdminDashboard = ({ onLogout }) => {
   const navigate = useNavigate();
-  const [currentPage, setCurrentPage] = useState('dashboard')
+  const location = useLocation();
+  const [currentPage, setCurrentPage] = useState(location.state?.from || 'dashboard')
   const [dashboardStats, setDashboardStats] = useState({})
   const [hospitalData, setHospitalData] = useState([])
   const [donorData, setDonorData] = useState([])
@@ -575,6 +645,19 @@ const AdminDashboard = ({ onLogout }) => {
   const [showHospitalMenu, setShowHospitalMenu] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [toasts, setToasts] = useState([])
+
+  const addToast = (title, message, type = 'info') => {
+    const id = Date.now()
+    setToasts(prev => [...prev, { id, title, message, type }])
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id))
+    }, 4000)
+  }
+
+  const removeToast = (id) => {
+    setToasts(prev => prev.filter(t => t.id !== id))
+  }
 
   // Hospital Dashboard State
   const [hospitalStats, setHospitalStats] = useState({
@@ -716,8 +799,9 @@ const AdminDashboard = ({ onLogout }) => {
         h._id === id ? { ...h, status: 'approved', updatedAt: new Date().toISOString() } : h
       ))
       loadHospitalStats()
+      addToast('Success', 'Hospital approved successfully', 'success')
     } catch (err) {
-      setError(err.message)
+      addToast('Error', err.message, 'error')
     }
   }
 
@@ -727,8 +811,9 @@ const AdminDashboard = ({ onLogout }) => {
       await apiService.rejectHospital(id)
       setHospitalData(hospitalData.filter(h => h._id !== id))
       loadHospitalStats()
+      addToast('Rejected', 'Hospital request has been removed', 'warning')
     } catch (err) {
-      setError(err.message)
+      addToast('Error', err.message, 'error')
     }
   }
 
@@ -742,10 +827,29 @@ const AdminDashboard = ({ onLogout }) => {
 
   return (
     <div className="admin-dashboard">
+      <div className="toast-container">
+        {toasts.map(toast => (
+          <div key={toast.id} className={`toast toast-${toast.type}`}>
+            <div className="toast-icon">
+              {toast.type === 'success' && <Check size={16} />}
+              {toast.type === 'error' && <X size={16} />}
+              {toast.type === 'warning' && <AlertCircle size={16} />}
+              {toast.type === 'info' && <Info size={16} />}
+            </div>
+            <div className="toast-content">
+              <p className="toast-title">{toast.title}</p>
+              <p className="toast-message">{toast.message}</p>
+            </div>
+            <button className="toast-close" onClick={() => removeToast(toast.id)}>
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-header">
-          <h1>ORGAN DONATION SYSTEM</h1>
+          <h1 className="tracking-tighter">ORGAN DONATION SYSTEM</h1>
         </div>
         <nav className="sidebar-nav">
           <button className={`nav-item ${currentPage === 'dashboard' ? 'active' : ''}`} onClick={() => setCurrentPage('dashboard')}>
@@ -757,7 +861,7 @@ const AdminDashboard = ({ onLogout }) => {
           <button className={`nav-item ${currentPage === 'hospitalRequests' ? 'active' : ''}`} onClick={() => setCurrentPage('hospitalRequests')}>
             <FileText size={18} /> Hospital Requests
             {dashboardStats.pendingHospitals > 0 && (
-              <span className="ml-auto bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">
+              <span className="ml-auto bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
                 {dashboardStats.pendingHospitals}
               </span>
             )}
@@ -786,56 +890,60 @@ const AdminDashboard = ({ onLogout }) => {
         <header className="top-bar">
           <div className="search-box">
             <Search size={18} />
-            <input type="text" placeholder="Search..." />
+            <input type="text" placeholder="Global system search..." />
           </div>
           <div className="top-bar-actions">
-            <button className="icon-btn"><Bell size={18} /></button>
+            <button className="icon-btn relative">
+              <Bell size={18} />
+              <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></div>
+            </button>
             <div className="profile-menu">
-              <button className="profile-btn"><User size={18} /><span>Admin</span><ChevronDown size={16} /></button>
+              <button className="profile-btn"><User size={18} /><span>Administrator</span><ChevronDown size={16} /></button>
             </div>
-            <button className="logout-btn" onClick={onLogout}><LogOut size={18} /></button>
+            <button className="logout-btn" onClick={onLogout}><LogOut size={18} /> Logout</button>
           </div>
         </header>
 
-        {/* Page Content */}
-        {currentPage === 'dashboard' && (
-          <DashboardSection
-            dashboardStats={dashboardStats}
-            hospitalData={hospitalData}
-            setCurrentPage={setCurrentPage}
-            loading={loading}
-            error={error}
-          />
-        )}
-        {currentPage === 'hospitals' && (
-          <HospitalsSection
-            hospitalData={hospitalData}
-            hospitalStats={hospitalStats}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            filters={filters}
-            handleFilterChange={handleFilterChange}
-            clearFilters={clearFilters}
-            loading={loading}
-            error={error}
-            onHospitalClick={(id) => navigate(`/admin/hospitals/${id}`)}
-          />
-        )}
-        {currentPage === 'donors' && <DonorsSection apiService={apiService} />}
-        {currentPage === 'requests' && <OrganRequestsSection requestData={requestData} setCurrentPage={setCurrentPage} />}
-        {currentPage === 'transplants' && <TransplantsSection transplantData={transplantData} />}
-        {currentPage === 'reports' && <ReportsSection apiService={apiService} dashboardStats={dashboardStats} />}
-        {currentPage === 'hospitalRequests' && (
-          <HospitalRequestsSection
-            hospitalData={hospitalData}
-            handleApprove={handleApprove}
-            handleReject={handleReject}
-            dashboardStats={dashboardStats}
-            loading={loading}
-            error={error}
-          />
-        )}
-        {currentPage === 'settings' && <SettingsSection />}
+        <main className="dashboard-content-area">
+          {currentPage === 'dashboard' && (
+            <DashboardSection
+              dashboardStats={dashboardStats}
+              hospitalData={hospitalData}
+              setCurrentPage={setCurrentPage}
+              loading={loading}
+              error={error}
+            />
+          )}
+          {currentPage === 'hospitals' && (
+            <HospitalsSection
+              hospitalData={hospitalData}
+              hospitalStats={hospitalStats}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              filters={filters}
+              handleFilterChange={handleFilterChange}
+              clearFilters={clearFilters}
+              loading={loading}
+              error={error}
+              onHospitalClick={(id) => navigate(`/admin/hospitals/${id}`, { state: { from: currentPage } })}
+            />
+          )}
+          {currentPage === 'donors' && <DonorsSection apiService={apiService} />}
+          {currentPage === 'requests' && <OrganRequestsSection requestData={requestData} setCurrentPage={setCurrentPage} loading={loading} />}
+          {currentPage === 'transplants' && <TransplantsSection transplantData={transplantData} loading={loading} />}
+          {currentPage === 'reports' && <ReportsSection apiService={apiService} dashboardStats={dashboardStats} />}
+          {currentPage === 'hospitalRequests' && (
+            <HospitalRequestsSection
+              hospitalData={hospitalData}
+              handleApprove={handleApprove}
+              handleReject={handleReject}
+              dashboardStats={dashboardStats}
+              loading={loading}
+              error={error}
+            />
+          )}
+          {currentPage === 'settings' && <SettingsSection />}
+        </main>
       </div>
     </div>
   )
