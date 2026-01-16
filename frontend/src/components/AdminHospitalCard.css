@@ -1,0 +1,203 @@
+.admin-hospital-card {
+    display: flex;
+    flex-direction: column;
+    /* Changed to Vertical */
+    background: white;
+    border-radius: 16px;
+    /* Slightly more rounded */
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid #f1f5f9;
+    cursor: pointer;
+    height: 100%;
+    position: relative;
+}
+
+.admin-hospital-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Image Wrapper - Full Width Top */
+.admin-card-image-wrapper {
+    width: 100%;
+    height: 200px;
+    position: relative;
+}
+
+.admin-card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Deal/Status Badge Overlay - Top Left */
+.card-badge-overlay {
+    position: absolute;
+    top: 12px;
+    left: 0;
+    background: linear-gradient(90deg, #8b5cf6, #d946ef);
+    color: white;
+    padding: 4px 12px 4px 8px;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+}
+
+/* More Options Badge - Top Center (Mocking the provided image style) */
+.more-options-badge {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #3b82f6;
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 10px;
+    border-radius: 12px;
+    z-index: 20;
+    font-weight: 600;
+    border: 2px solid white;
+}
+
+/* Right Side Details -> Now Bottom Details */
+.admin-card-details {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 12px;
+}
+
+.admin-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 4px;
+}
+
+.admin-hospital-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.duration-badge {
+    border: 1px solid #3b82f6;
+    color: #3b82f6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+/* Location below title */
+.admin-location {
+    font-size: 0.85rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+/* Specification Bullet Points */
+.admin-specs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 4px;
+    margin-top: 4px;
+}
+
+.spec-item {
+    font-size: 0.8rem;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.spec-bullet {
+    width: 4px;
+    height: 4px;
+    background-color: #cbd5e1;
+    border-radius: 50%;
+}
+
+/* Green Checkmark features */
+.feature-list {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: #059669;
+    /* Green text like image */
+    font-weight: 500;
+}
+
+.check-icon {
+    color: #10b981;
+}
+
+/* Footer Price/Action Area */
+.admin-card-footer {
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.footer-label {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.footer-price {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.status-badge-container {
+    display: flex;
+    gap: 4px;
+}
+
+/* Reusing these for the footer status display */
+.status-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.status-badge.approved {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-badge.suspended {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-badge.pending {
+    background: #fef3c7;
+    color: #92400e;
+}
