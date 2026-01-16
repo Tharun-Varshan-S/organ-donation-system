@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
     ArrowLeft, MapPin, Phone, Mail, Calendar, Shield,
     Users, Heart, Activity, TrendingUp, Star, CheckCircle,
-    Building2, Stethoscope, Clock
+    Building2, Stethoscope, Clock, Siren, Map
 } from 'lucide-react';
 import apiService from '../services/api';
 import './HospitalDetailPage.css';
@@ -96,20 +96,29 @@ const HospitalDetailPage = () => {
         <div className="hospital-detail-page">
             {/* Header */}
             <div className="detail-header">
-                <button onClick={() => navigate('/login', { state: { from: location.state?.from || 'hospitals' } })} className="btn-back">
+                <button onClick={() => navigate('/login', { state: { from: location.state?.from || 'dashboard' } })} className="btn-back">
                     <ArrowLeft size={20} />
-                    Back
+                    System Command Center
                 </button>
                 <div className="header-info">
                     <div className="title-section">
-                        <Building2 size={32} className="hospital-icon" />
+                        <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-xl shadow-blue-200">
+                            <Building2 size={32} />
+                        </div>
                         <div>
                             {loading ? (
                                 <div className="skeleton" style={{ height: '32px', width: '300px' }}></div>
                             ) : (
                                 <>
-                                    <h1>{hospital?.name}</h1>
-                                    <p className="license">License: {hospital?.licenseNumber}</p>
+                                    <div className="flex items-center gap-3">
+                                        <h1>{hospital?.name}</h1>
+                                        {hospital?.contactInfo?.emergencyPhone && (
+                                            <span className="bg-red-500 text-white text-[10px] font-black px-2 py-1 rounded-full animate-pulse flex items-center gap-1">
+                                                <Siren size={10} /> CRITICAL ENTITY
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="license font-mono uppercase tracking-widest text-xs opacity-60">ID: {hospital?.licenseNumber || 'PENDING'}</p>
                                 </>
                             )}
                         </div>
@@ -127,13 +136,16 @@ const HospitalDetailPage = () => {
 
             {/* Tabs */}
             <div className="detail-tabs">
-                {['overview', 'location', 'statistics', 'reviews', 'timeline'].map(tab => (
+                {['overview', 'location', 'statistics', 'reviews', 'timeline', 'requests'].map(tab => (
                     <button
                         key={tab}
                         className={`tab ${activeTab === tab ? 'active' : ''}`}
                         onClick={() => setActiveTab(tab)}
                     >
-                        {tab.charAt(0).toUpperCase() + tab.slice(1).replace('location', 'Location & Map').replace('timeline', 'Activity Timeline')}
+                        {tab.charAt(0).toUpperCase() + tab.slice(1)
+                            .replace('location', 'Location & Map')
+                            .replace('timeline', 'Activity Timeline')
+                            .replace('requests', 'Organ Requests')}
                     </button>
                 ))}
             </div>
@@ -220,22 +232,33 @@ const HospitalDetailPage = () => {
                                 </div>
 
                                 {/* GOOGLE MAPS - ALWAYS SHOWS */}
-                                <div className="map-section">
-                                    <h3>Location Map</h3>
-                                    <div className="map-container">
-                                        <iframe
-                                            title="Hospital Location"
-                                            width="100%"
-                                            height="450"
-                                            frameBorder="0"
-                                            style={{ border: 0 }}
-                                            src={`https://www.google.com/maps?q=${mapLat},${mapLng}&output=embed&z=15`}
-                                            allowFullScreen
-                                        />
+                                <div className="map-section animate-fade-in">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3><Map size={20} className="text-blue-600" /> Geospatial Intelligence</h3>
+                                        <div className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div> System Verified Location
+                                        </div>
                                     </div>
-                                    <p className="map-note">
-                                        Coordinates: {mapLat.toFixed(6)}, {mapLng.toFixed(6)}
-                                    </p>
+                                    <div className="map-container card-hover-shadow" style={{ borderRadius: '24px', overflow: 'hidden', border: '1px solid #e2e8f0', height: '450px', position: 'relative' }}>
+                                        {loading ? (
+                                            <div className="skeleton h-full w-full"></div>
+                                        ) : (
+                                            <iframe
+                                                title="Hospital Location"
+                                                width="100%"
+                                                height="100%"
+                                                frameBorder="0"
+                                                style={{ border: 0 }}
+                                                src={`https://www.google.com/maps?q=${hospital?.name}+${hospital?.location?.address || ''}+${hospital?.location?.city || ''}&output=embed&z=16`}
+                                                allowFullScreen
+                                            />
+                                        )}
+                                        <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur p-4 rounded-2xl shadow-2xl border border-white/20 z-10 max-w-[200px]">
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Coordinates</p>
+                                            <p className="text-xs font-black text-[#1e293b]">{mapLat.toFixed(6)}, {mapLng.toFixed(6)}</p>
+                                            <p className="text-[10px] font-bold text-blue-600 mt-1 uppercase">Precision Lockdown Active</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -279,48 +302,104 @@ const HospitalDetailPage = () => {
                         {/* REVIEWS TAB */}
                         {activeTab === 'reviews' && (
                             <div className="tab-content">
-                                {hospital?.reviewStats && hospital.reviewStats.totalReviews > 0 ? (
-                                    <>
-                                        <div className="reviews-summary">
-                                            <div className="rating-display">
-                                                <h2>{hospital.reviewStats.averageRating}</h2>
-                                                <div className="stars">
-                                                    {renderStars(Math.round(hospital.reviewStats.averageRating))}
-                                                </div>
-                                                <p>{hospital.reviewStats.totalReviews} reviews</p>
-                                                <p className="verified">
-                                                    <CheckCircle size={16} /> {hospital.reviewStats.verifiedCount} verified
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="reviews-list">
-                                            {hospital.reviewStats.recentReviews.map((review, idx) => (
-                                                <div key={idx} className="review-card">
-                                                    <div className="review-header">
-                                                        <div className="stars">
-                                                            {renderStars(review.rating)}
-                                                        </div>
-                                                        {review.verified && (
-                                                            <span className="verified-badge">
-                                                                <CheckCircle size={14} /> Verified
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="review-comment">{review.comment}</p>
-                                                    <p className="review-date">
-                                                        {new Date(review.createdAt).toLocaleDateString()}
-                                                    </p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="empty-state">
-                                        <Star size={48} />
-                                        <p>No reviews yet</p>
+                                <div className="reviews-summary flex items-center gap-8 p-8 bg-gray-50 rounded-3xl mb-8 border border-gray-100">
+                                    <div className="text-center">
+                                        <p className="text-5xl font-black text-[#1e293b]">{hospital?.reviewStats?.averageRating || '0.0'}</p>
+                                        <div className="flex justify-center mt-2">{renderStars(Math.round(hospital?.reviewStats?.averageRating || 0))}</div>
+                                        <p className="text-[10px] font-black uppercase text-[#94a3b8] mt-2 tracking-widest">{hospital?.reviewStats?.totalReviews || 0} TOTAL REVIEWS</p>
                                     </div>
-                                )}
+                                    <div className="h-20 w-px bg-gray-200"></div>
+                                    <div className="flex-1 space-y-3">
+                                        {[5, 4, 3, 2, 1].map(star => (
+                                            <div key={star} className="flex items-center gap-4">
+                                                <span className="text-[10px] font-black text-[#64748b] w-4">{star}</span>
+                                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-yellow-400"
+                                                        style={{ width: `${hospital?.reviews?.filter(r => r.rating === star).length / (hospital?.reviews?.length || 1) * 100}%` }}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {hospital?.reviews?.map((review, i) => (
+                                        <div key={i} className="review-card p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-black">
+                                                        {review.userName?.charAt(0) || 'U'}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-black text-[#1e293b] text-sm uppercase">{review.userName || 'Verified User'}</p>
+                                                        <p className="text-[10px] text-[#94a3b8] font-bold">{new Date(review.date).toLocaleDateString()}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-1">{renderStars(review.rating)}</div>
+                                            </div>
+                                            <p className="text-sm text-[#475569] leading-relaxed">{review.comment}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* REQUESTS TAB */}
+                        {activeTab === 'requests' && (
+                            <div className="tab-content">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="text-xl font-black text-[#1e293b] uppercase tracking-tighter">Active Demands Matrix</h3>
+                                    <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black rounded-lg border border-blue-100 uppercase tracking-widest">
+                                        {hospital?.requests?.length || 0} Total Requests
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {hospital?.requests?.length > 0 ? (
+                                        hospital.requests.map(req => (
+                                            <div key={req._id} className="request-card-mini p-6 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all relative overflow-hidden group">
+                                                <div className="absolute top-0 right-0 w-24 h-24 bg-gray-50 rounded-full -mr-12 -mt-12 group-hover:bg-blue-50 transition-colors z-0"></div>
+                                                <div className="relative z-10">
+                                                    <div className="flex justify-between items-start mb-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 rounded-xl bg-[#1e293b] text-white flex items-center justify-center font-black text-sm uppercase">
+                                                                {req.organType?.charAt(0)}
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="font-black text-[#1e293b] uppercase tracking-tighter">{req.organType}</h4>
+                                                                <span className="text-[10px] font-black text-[#94a3b8] uppercase">#{req.requestId || req._id.slice(-6).toUpperCase()}</span>
+                                                            </div>
+                                                        </div>
+                                                        <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest ${req.patient?.urgencyLevel === 'critical' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                                                            {req.patient?.urgencyLevel || 'STANDARD'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-50">
+                                                        <div>
+                                                            <p className="text-[10px] font-black text-[#94a3b8] uppercase tracking-widest mb-1">Status</p>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className={`w-2 h-2 rounded-full animate-pulse ${req.status === 'completed' ? 'bg-green-500' : 'bg-amber-500'}`}></div>
+                                                                <span className="text-xs font-black text-[#1e293b] uppercase">{req.status}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-[10px] font-black text-[#94a3b8] uppercase tracking-widest mb-1">Registered</p>
+                                                            <p className="text-xs font-bold text-[#64748b]">{new Date(req.createdAt).toLocaleDateString()}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="col-span-2 py-20 text-center bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
+                                            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                                                <Heart size={24} className="text-gray-300" />
+                                            </div>
+                                            <p className="text-sm font-black text-[#94a3b8] uppercase tracking-widest">No Active Organ Requests Synchronized</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
 

@@ -7,6 +7,10 @@ const hospitalSchema = new mongoose.Schema({
     required: [true, 'Hospital name is required'],
     trim: true
   },
+  image: {
+    type: String,
+    default: 'https://images.unsplash.com/photo-1538108149393-fbbd81895907?auto=format&fit=crop&q=80&w=1000'
+  },
   email: {
     type: String,
     required: [true, 'Email is required'],
@@ -18,7 +22,7 @@ const hospitalSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Password is required'],
     minlength: [6, 'Password must be at least 6 characters'],
-    select: false // Don't return password by default
+    select: false
   },
   licenseNumber: {
     type: String,
@@ -33,7 +37,10 @@ const hospitalSchema = new mongoose.Schema({
     coordinates: {
       latitude: Number,
       longitude: Number
-    }
+    },
+    latitude: Number,
+    longitude: Number,
+    region: String
   },
   contactInfo: {
     phone: String,
@@ -49,6 +56,19 @@ const hospitalSchema = new mongoose.Schema({
     default: 'pending'
   },
   specializations: [String],
+  stats: {
+    donorCount: { type: Number, default: 0 },
+    requestCount: { type: Number, default: 0 },
+    successfulTransplants: { type: Number, default: 0 },
+    successRate: { type: Number, default: 0 }
+  },
+  reviews: [{
+    rating: { type: Number, min: 1, max: 5 },
+    comment: String,
+    verified: { type: Boolean, default: false },
+    reviewerMasked: String,
+    createdAt: { type: Date, default: Date.now }
+  }],
   isActive: {
     type: Boolean,
     default: true
@@ -58,6 +78,8 @@ const hospitalSchema = new mongoose.Schema({
     ref: 'Admin'
   },
   approvedAt: Date,
+  rejectionReason: String,
+  suspensionReason: String,
   lastLogin: {
     type: Date
   }
@@ -72,9 +94,10 @@ hospitalSchema.pre('save', async function (next) {
   next();
 });
 
-// Compare password method
+// Match user entered password to hashed password in database
 hospitalSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
 export default mongoose.model('Hospital', hospitalSchema);
+

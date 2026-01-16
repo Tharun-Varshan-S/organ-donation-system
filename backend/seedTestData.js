@@ -1,13 +1,13 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-require('dotenv').config();
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
+import Hospital from './models/Hospital.js';
+import Donor from './models/Donor.js';
+import Request from './models/Request.js';
+import Transplant from './models/Transplant.js';
+import Admin from './models/Admin.js';
 
-// Import models
-const Hospital = require('./models/Hospital');
-const Donor = require('./models/Donor');
-const Request = require('./models/Request');
-const Transplant = require('./models/Transplant');
-const Admin = require('./models/Admin');
+dotenv.config();
 
 // Connect to MongoDB
 const connectDB = async () => {
@@ -409,7 +409,7 @@ const seedData = async () => {
     console.log(`- ${requests.length} organ requests created`);
     console.log(`- ${transplantsData.length} transplant records created`);
     console.log(`- 1 admin account created`);
-    
+
     console.log('\n🔐 Admin Login:');
     console.log('Email: admin@healthcare.com');
     console.log('Password: admin123');

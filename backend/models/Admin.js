@@ -30,6 +30,21 @@ const adminSchema = new mongoose.Schema({
   },
   lastLogin: {
     type: Date
+  },
+  settings: {
+    notifications: {
+      hospitalRequests: { type: Boolean, default: true },
+      criticalMatches: { type: Boolean, default: true },
+      slaBreaches: { type: Boolean, default: true }
+    },
+    theme: {
+      type: String,
+      default: 'light'
+    },
+    dashboardLayout: {
+      type: String,
+      default: 'compact'
+    }
   }
 }, {
   timestamps: true

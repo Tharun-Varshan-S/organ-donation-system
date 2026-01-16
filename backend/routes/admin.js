@@ -13,7 +13,10 @@ import {
   getRequests,
   getTransplants,
   getHospitalPerformance,
-  getAuditLogs
+  getAuditLogs,
+  getSystemReports,
+  getSettings,
+  updateSettings
 } from '../controllers/adminController.js';
 
 import { protect, adminOnly } from '../middleware/auth.js';
@@ -35,21 +38,22 @@ router.put('/hospitals/:id/suspend', suspendHospital);
 router.put('/hospitals/:id/reject', rejectHospital);
 router.put('/hospitals/:id/status', updateHospitalStatus);
 
-// Analytics routes
+// Donor & Analytics routes
+router.get('/donors', getDonors);
 router.get('/analytics/donors', getDonorAnalytics);
 router.get('/analytics/hospital-performance', getHospitalPerformance);
 
-// Audit logs
-router.get('/audit', getAuditLogs);
-
-
-// Donor routes (read-only)
-router.get('/donors', getDonors);
-
-// Request routes (read-only)
+// Request & Transplant routes (read-only)
 router.get('/requests', getRequests);
-
-// Transplant routes (read-only)
 router.get('/transplants', getTransplants);
 
+// Audit & Reports
+router.get('/audit', getAuditLogs);
+router.get('/reports/system', getSystemReports);
+
+// Settings
+router.get('/settings', getSettings);
+router.put('/settings', updateSettings);
+
 export default router;
+

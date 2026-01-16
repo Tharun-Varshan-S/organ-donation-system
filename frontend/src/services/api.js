@@ -61,6 +61,33 @@ class ApiService {
     return this.handleResponse(response)
   }
 
+  // Hospital Authentication
+  async hospitalLogin(email, password) {
+    const response = await fetch(`${API_BASE_URL}/hospitals/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    })
+
+    const data = await this.handleResponse(response)
+
+    if (data.success && data.token) {
+      this.setToken(data.token)
+    }
+
+    return data
+  }
+
+  async hospitalRegister(formData) {
+    const response = await fetch(`${API_BASE_URL}/hospitals/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    })
+
+    return this.handleResponse(response)
+  }
+
   // Dashboard Stats
   async getDashboardStats() {
     const response = await fetch(`${API_BASE_URL}/admin/dashboard/stats`, {
@@ -72,12 +99,13 @@ class ApiService {
 
   // Hospital Management
   async getHospitals(filters = {}) {
-    const { page = 1, limit = 10, status, search, state, specialization, emergency } = filters;
+    const { page = 1, limit = 10, status, search, state, city, specialization, emergency } = filters;
     let url = `${API_BASE_URL}/admin/hospitals?page=${page}&limit=${limit}`;
 
     if (status) url += `&status=${status}`;
     if (search) url += `&search=${encodeURIComponent(search)}`;
     if (state) url += `&state=${encodeURIComponent(state)}`;
+    if (city) url += `&city=${encodeURIComponent(city)}`;
     if (specialization) url += `&specialization=${encodeURIComponent(specialization)}`;
     if (emergency) url += `&emergency=true`;
 
@@ -183,6 +211,34 @@ class ApiService {
       headers: this.getAuthHeaders()
     })
 
+    return this.handleResponse(response)
+  }
+
+  async getSystemReports() {
+    const response = await fetch(`${API_BASE_URL}/admin/reports/system`, {
+      headers: this.getAuthHeaders()
+    })
+
+    return this.handleResponse(response)
+  }
+
+  // Settings
+  async getSettings() {
+    const response = await fetch(`${API_BASE_URL}/admin/settings`, {
+      headers: this.getAuthHeaders()
+    })
+    return this.handleResponse(response)
+  }
+
+  async updateSettings(settings) {
+    const response = await fetch(`${API_BASE_URL}/admin/settings`, {
+      method: 'PUT',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(settings)
+    })
     return this.handleResponse(response)
   }
 

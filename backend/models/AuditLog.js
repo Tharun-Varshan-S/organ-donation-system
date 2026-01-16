@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const auditLogSchema = new mongoose.Schema({
     actionType: {
@@ -9,11 +9,12 @@ const auditLogSchema = new mongoose.Schema({
     performedBy: {
         id: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Admin'
+            refPath: 'performedBy.role' // Dynamic ref
         },
         name: String,
         role: {
             type: String,
+            enum: ['Admin', 'Hospital'],
             default: 'Admin'
         }
     },
@@ -38,4 +39,4 @@ const auditLogSchema = new mongoose.Schema({
     timestamps: true
 });
 
-module.exports = mongoose.model('AuditLog', auditLogSchema);
+export default mongoose.model('AuditLog', auditLogSchema);

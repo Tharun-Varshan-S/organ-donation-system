@@ -14,3 +14,4 @@ router.post('/login', adminLogin);
 router.get('/profile', protect, adminOnly, getAdminProfile);
 
 export default router;
+

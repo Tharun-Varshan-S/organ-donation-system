@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { rateLimit } from 'express-rate-limit';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import connectDB from './config/database.js';
 import { errorHandler, notFound } from './middleware/error.js';
@@ -8,12 +8,11 @@ import { errorHandler, notFound } from './middleware/error.js';
 // Route imports
 import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
-import hospitalRoutes from './routes/hospital.js';
-import generalRoutes from './routes/route.js'; // Existing general routes
-import setupMiddleware from './middlewares/setup.js'; // Existing setup if needed
+import hospitalRoutes from './routes/hospitals.js'; // Note: check filename
+import legacyHospitalRoutes from './routes/hospital.js'; // From remote
+import generalRoutes from './routes/route.js'; // From remote
 
 dotenv.config();
-console.log('DEBUG: MONGODB_URI exists:', !!process.env.MONGODB_URI);
 
 // Connect to database
 connectDB();
@@ -44,11 +43,6 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Also runs existing setup if it contains more specific middleware
-if (typeof setupMiddleware === 'function') {
-  setupMiddleware(app);
-}
-
 // Health check route
 app.get('/api/health', (req, res) => {
   res.status(200).json({
@@ -60,11 +54,11 @@ app.get('/api/health', (req, res) => {
 });
 
 // API Routes
-app.use('/api/admin', authRoutes); // Auth routes under /api/admin as per incoming
-app.use('/api/admin', adminRoutes); // Admin routes
-app.use('/api/hospitals', hospitalRoutes); // Hospital routes
-app.use('/', generalRoutes); // Fallback to existing routes
-
+app.use('/api/admin', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/hospitals', hospitalRoutes);
+if (legacyHospitalRoutes) app.use('/api/legacy-hospitals', legacyHospitalRoutes);
+if (generalRoutes) app.use('/', generalRoutes);
 
 // Error handling middleware
 app.use(notFound);
@@ -87,3 +81,4 @@ process.on('unhandledRejection', (err, promise) => {
 });
 
 export default app;
+

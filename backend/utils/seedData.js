@@ -38,6 +38,7 @@ const seedData = async () => {
         name: 'City General Hospital',
         email: 'contact@citygeneral.com',
         licenseNumber: 'LIC001',
+        password: 'password123',
         location: {
           address: '123 Main St',
           city: 'New York',
@@ -61,6 +62,7 @@ const seedData = async () => {
         name: 'Metro Medical Center',
         email: 'info@metromedical.com',
         licenseNumber: 'LIC002',
+        password: 'password123',
         location: {
           address: '456 Oak Ave',
           city: 'Los Angeles',
@@ -84,6 +86,7 @@ const seedData = async () => {
         name: 'Regional Healthcare',
         email: 'admin@regionalhc.com',
         licenseNumber: 'LIC003',
+        password: 'password123',
         location: {
           address: '789 Pine St',
           city: 'Chicago',
@@ -105,6 +108,7 @@ const seedData = async () => {
         name: 'University Hospital',
         email: 'contact@universityhospital.edu',
         licenseNumber: 'LIC004',
+        password: 'password123',
         location: {
           address: '321 University Blvd',
           city: 'Boston',

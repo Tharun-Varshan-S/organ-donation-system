@@ -54,9 +54,9 @@ const errorHandler = (err, req, res, next) => {
   }
 
   // Send error response
-  res.status(error.statusCode).json({
+  res.status(error.statusCode || 500).json({
     success: false,
-    message: error.message
+    message: error.message || 'Server Error'
   });
 };
 
@@ -72,3 +72,4 @@ export {
   errorHandler,
   notFound
 };
+

@@ -2,12 +2,11 @@ import jwt from 'jsonwebtoken';
 import Admin from '../models/Admin.js';
 import Hospital from '../models/Hospital.js';
 
-// Protect routes - verify JWT token
+// Protect routes - verify JWT token (Universal)
 const protect = async (req, res, next) => {
   try {
     let token;
 
-    // Check for token in headers
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     }
@@ -22,50 +21,46 @@ const protect = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Get admin from token
+    // Try finding admin
     const admin = await Admin.findById(decoded.id).select('-password');
-
-    if (!admin) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token is not valid. Admin not found.'
-      });
+    if (admin) {
+      if (!admin.isActive) {
+        return res.status(401).json({ success: false, message: 'Admin account is deactivated.' });
+      }
+      req.user = admin;
+      req.admin = admin;
+      req.userType = 'admin';
+      return next();
     }
 
-    if (!admin.isActive) {
-      return res.status(401).json({
-        success: false,
-        message: 'Admin account is deactivated.'
-      });
+    // Try finding hospital
+    const hospital = await Hospital.findById(decoded.id).select('-password');
+    if (hospital) {
+      if (!hospital.isActive) {
+        return res.status(401).json({ success: false, message: 'Hospital account is deactivated.' });
+      }
+      if (hospital.status !== 'approved') {
+        return res.status(403).json({ success: false, message: `Hospital account is ${hospital.status}.` });
+      }
+      req.user = hospital;
+      req.hospital = hospital;
+      req.userType = 'hospital';
+      return next();
     }
 
-    req.admin = admin;
-    next();
+    return res.status(401).json({ success: false, message: 'Token is not valid. User not found.' });
   } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token.'
-      });
-    }
-
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Token expired.'
-      });
-    }
-
-    res.status(500).json({
+    console.error('Auth error:', error.message);
+    res.status(401).json({
       success: false,
-      message: 'Server error during authentication.'
+      message: 'Not authorized, token failed'
     });
   }
 };
 
 // Admin only access
 const adminOnly = (req, res, next) => {
-  if (req.admin && req.admin.role === 'admin') {
+  if (req.userType === 'admin' || (req.admin && req.admin.role === 'admin')) {
     next();
   } else {
     res.status(403).json({
@@ -75,77 +70,9 @@ const adminOnly = (req, res, next) => {
   }
 };
 
-// Protect hospital routes - verify JWT token
-const protectHospital = async (req, res, next) => {
-  try {
-    let token;
-
-    // Check for token in headers
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
-    }
-
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Access denied. No token provided.'
-      });
-    }
-
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Get hospital from token
-    const hospital = await Hospital.findById(decoded.id).select('-password');
-
-    if (!hospital) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token is not valid. Hospital not found.'
-      });
-    }
-
-    if (!hospital.isActive) {
-      return res.status(401).json({
-        success: false,
-        message: 'Hospital account is deactivated.'
-      });
-    }
-
-    if (hospital.status !== 'approved') {
-      return res.status(403).json({
-        success: false,
-        message: `Hospital account is ${hospital.status}. Please wait for admin approval.`
-      });
-    }
-
-    req.hospital = hospital;
-    next();
-  } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token.'
-      });
-    }
-
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Token expired.'
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      message: 'Server error during authentication.'
-    });
-  }
-};
-
 // Hospital only access
 const hospitalOnly = (req, res, next) => {
-  if (req.hospital) {
+  if (req.userType === 'hospital' || req.hospital) {
     next();
   } else {
     res.status(403).json({
@@ -155,9 +82,12 @@ const hospitalOnly = (req, res, next) => {
   }
 };
 
+// Keep protectHospital as alias for backward compatibility if needed
+const protectHospital = protect;
+
 export {
   protect,
   adminOnly,
-  protectHospital,
-  hospitalOnly
+  hospitalOnly,
+  protectHospital
 };
