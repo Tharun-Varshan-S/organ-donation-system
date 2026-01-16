@@ -12,7 +12,7 @@ const AuthPage = () => {
   const [authMode, setAuthMode] = useState('login') // 'login' or 'register'
   const [statusMessage, setStatusMessage] = useState({ text: '', type: '' })
   const [isLoading, setIsLoading] = useState(false)
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false)
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(!!localStorage.getItem('adminToken'))
 
   // Handle role change with animation
   const handleRoleChange = (roleKey) => {
@@ -33,9 +33,9 @@ const AuthPage = () => {
 
     // Basic validation
     if (!formData.email || !formData.password) {
-      setStatusMessage({ 
-        text: 'Please fill in all required fields', 
-        type: 'error' 
+      setStatusMessage({
+        text: 'Please fill in all required fields',
+        type: 'error'
       })
       setIsLoading(false)
       return
@@ -43,9 +43,9 @@ const AuthPage = () => {
 
     // Only handle admin authentication (as per backend scope)
     if (selectedRole !== 'admin') {
-      setStatusMessage({ 
-        text: 'Only admin authentication is currently supported', 
-        type: 'error' 
+      setStatusMessage({
+        text: 'Only admin authentication is currently supported',
+        type: 'error'
       })
       setIsLoading(false)
       return
@@ -54,18 +54,18 @@ const AuthPage = () => {
     // Additional validation for registration
     if (authMode === 'register') {
       if (!formData.name) {
-        setStatusMessage({ 
-          text: 'Full name is required for registration', 
-          type: 'error' 
+        setStatusMessage({
+          text: 'Full name is required for registration',
+          type: 'error'
         })
         setIsLoading(false)
         return
       }
 
       if (!formData.secretKey) {
-        setStatusMessage({ 
-          text: 'Admin secret key is required for registration', 
-          type: 'error' 
+        setStatusMessage({
+          text: 'Admin secret key is required for registration',
+          type: 'error'
         })
         setIsLoading(false)
         return
@@ -75,33 +75,33 @@ const AuthPage = () => {
     // Call backend API
     try {
       let response
-      
+
       if (authMode === 'login') {
         response = await apiService.adminLogin(formData.email, formData.password)
       } else {
         response = await apiService.adminRegister(formData.email, formData.password, formData.name, formData.secretKey)
       }
-      
+
       if (response.success) {
         if (authMode === 'login') {
           setIsAdminLoggedIn(true)
-          setStatusMessage({ 
-            text: 'Login successful! Redirecting to Admin Dashboard...', 
-            type: 'success' 
+          setStatusMessage({
+            text: 'Login successful! Redirecting to Admin Dashboard...',
+            type: 'success'
           })
         } else {
-          setStatusMessage({ 
-            text: 'Registration successful! You can now login.', 
-            type: 'success' 
+          setStatusMessage({
+            text: 'Registration successful! You can now login.',
+            type: 'success'
           })
           setAuthMode('login')
         }
       }
-      
+
     } catch (error) {
-      setStatusMessage({ 
-        text: error.message || 'An error occurred. Please try again.', 
-        type: 'error' 
+      setStatusMessage({
+        text: error.message || 'An error occurred. Please try again.',
+        type: 'error'
       })
     } finally {
       setIsLoading(false)
@@ -135,11 +135,11 @@ const AuthPage = () => {
   return (
     <>
       <VideoBackground />
-      
+
       <main className="login-wrapper">
         <div className="login-card">
           {/* Role Selection */}
-          <RoleTabs 
+          <RoleTabs
             selectedRole={selectedRole}
             onRoleChange={handleRoleChange}
           />
