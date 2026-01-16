@@ -1,14 +1,15 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-require('dotenv').config();
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const Admin = require('../models/Admin');
-const Hospital = require('../models/Hospital');
-const Donor = require('../models/Donor');
-const Request = require('../models/Request');
-const Transplant = require('../models/Transplant');
+import Admin from '../models/Admin.js';
+import Hospital from '../models/Hospital.js';
+import Donor from '../models/Donor.js';
+import Request from '../models/Request.js';
+import Transplant from '../models/Transplant.js';
 
-const connectDB = require('../config/database');
+import connectDB from '../config/database.js';
 
 const seedData = async () => {
   try {
@@ -271,7 +272,7 @@ const seedData = async () => {
         expiryDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) // 90 days
       }
     ];
-    
+
     const requests = [];
     for (let i = 0; i < requestsData.length; i++) {
       const request = new Request(requestsData[i]);
@@ -304,7 +305,7 @@ const seedData = async () => {
       }
     });
     await transplant1.save();
-    
+
     const transplant2 = new Transplant({
       request: requests[0]._id,
       donor: donors[0]._id,
@@ -345,7 +346,7 @@ const seedData = async () => {
     console.log(`- Donors: ${donors.length} created`);
     console.log(`- Requests: ${requests.length} created`);
     console.log(`- Transplants: 2 created`);
-    
+
     console.log('\n🔐 Admin Login Credentials:');
     console.log('Email: admin@healthcare.com');
     console.log('Password: admin123456');

@@ -201,9 +201,61 @@ const updateHospitalProfile = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get all APPROVED hospitals (Public)
+// @route   GET /api/hospital
+// @access  Public
+const getPublicHospitals = asyncHandler(async (req, res) => {
+  const { search, state, specialization } = req.query;
+
+  let query = { status: 'approved' }; // STRICTLY APPROVED ONLY
+
+  if (search) {
+    query.$or = [
+      { name: { $regex: search, $options: 'i' } },
+      { 'location.city': { $regex: search, $options: 'i' } },
+      { 'location.state': { $regex: search, $options: 'i' } }
+    ];
+  }
+
+  if (state) query['location.state'] = state;
+  if (specialization) query.specializations = specialization;
+
+  const hospitals = await Hospital.find(query)
+    .select('-password -licenseNumber -approvedBy -approvedAt -createdAt -updatedAt -__v') // Hide internal fields
+    .sort({ name: 1 });
+
+  res.status(200).json({
+    success: true,
+    count: hospitals.length,
+    data: hospitals
+  });
+});
+
+// @desc    Get single hospital details (Public)
+// @route   GET /api/hospital/:id
+// @access  Public
+const getPublicHospitalById = asyncHandler(async (req, res) => {
+  const hospital = await Hospital.findOne({
+    _id: req.params.id,
+    status: 'approved' // STRICTLY APPROVED ONLY
+  }).select('-password -licenseNumber -approvedBy -approvedAt');
+
+  if (!hospital) {
+    throw new ErrorResponse('Hospital not found or not approved', 404);
+  }
+
+  res.status(200).json({
+    success: true,
+    data: hospital
+  });
+});
+
 export {
   hospitalRegister,
   hospitalLogin,
   getHospitalProfile,
-  updateHospitalProfile
+  updateHospitalProfile,
+  getPublicHospitals,
+  getPublicHospitalById
 };
+

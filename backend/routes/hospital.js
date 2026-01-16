@@ -3,11 +3,17 @@ import {
   hospitalRegister,
   hospitalLogin,
   getHospitalProfile,
-  updateHospitalProfile
+  updateHospitalProfile,
+  getPublicHospitals,
+  getPublicHospitalById
 } from '../controllers/hospitalController.js';
 import { protectHospital, hospitalOnly } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Public Routes
+router.get('/', getPublicHospitals);
+router.get('/:id', getPublicHospitalById);
 
 // @route   POST /api/hospital/register
 router.post('/register', hospitalRegister);

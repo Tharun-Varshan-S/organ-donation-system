@@ -2,6 +2,8 @@ import Hospital from '../models/Hospital.js';
 import Donor from '../models/Donor.js';
 import Request from '../models/Request.js';
 import Transplant from '../models/Transplant.js';
+import AuditLog from '../models/AuditLog.js';
+
 
 // @desc    Get dashboard statistics
 // @route   GET /api/admin/dashboard/stats
@@ -137,6 +139,103 @@ const getHospitals = async (req, res) => {
   }
 };
 
+// @desc    Get hospital statistics and groupings
+// @route   GET /api/admin/hospitals/stats
+// @access  Private (Admin)
+const getHospitalStats = async (req, res) => {
+  try {
+    // 1. Overall Status Counts
+    const statusCounts = await Hospital.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+
+    // 2. Region-wise (State) Counts
+    const regionStats = await Hospital.aggregate([
+      {
+        $group: {
+          _id: '$location.state',
+          totalHospitals: { $sum: 1 },
+          approvedHospitals: {
+            $sum: { $cond: [{ $eq: ['$status', 'approved'] }, 1, 0] }
+          }
+        }
+      },
+      { $sort: { totalHospitals: -1 } }
+    ]);
+
+    // 3. Specialization-wise Counts
+    const specializationStats = await Hospital.aggregate([
+      { $unwind: '$specializations' },
+      {
+        $group: {
+          _id: '$specializations',
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { count: -1 } }
+    ]);
+
+    // 4. Emergency Count
+    const emergencyCount = await Hospital.countDocuments({
+      'contactInfo.emergencyPhone': { $exists: true, $ne: '' },
+      'capacity.availableBeds': { $gt: 0 }
+    });
+
+    const totalCount = await Hospital.countDocuments();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        total: totalCount,
+        statusCounts: statusCounts.reduce((acc, curr) => {
+          acc[curr._id] = curr.count;
+          return acc;
+        }, {}),
+        regionStats,
+        specializationStats,
+        emergencyCount
+      }
+    });
+
+  } catch (error) {
+    console.error('Get hospital stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching hospital statistics'
+    });
+  }
+};
+
+// @desc    Get single hospital details
+// @route   GET /api/admin/hospitals/:id
+// @access  Private (Admin)
+const getHospitalDetails = async (req, res) => {
+  try {
+    const hospital = await Hospital.findById(req.params.id)
+      .populate('approvedBy', 'name email');
+
+    if (!hospital) {
+      return res.status(404).json({
+        success: false,
+        message: 'Hospital not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: hospital
+    });
+
+  } catch (error) {
+    console.error('Get hospital details error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching hospital details'
+    });
+  }
+};
+
+
 // @desc    Approve hospital
 // @route   PUT /api/admin/hospitals/:id/approve
 // @access  Private (Admin)
@@ -157,11 +256,25 @@ const approveHospital = async (req, res) => {
 
     await hospital.save();
 
+    // Log Audit
+    await AuditLog.create({
+      actionType: 'APPROVE',
+      performedBy: {
+        id: req.admin.id,
+        name: req.admin.name,
+        role: 'Admin'
+      },
+      entityType: 'HOSPITAL',
+      entityId: hospital._id,
+      details: 'Hospital approved'
+    });
+
     res.status(200).json({
       success: true,
       message: 'Hospital approved successfully',
       data: hospital
     });
+
 
   } catch (error) {
     console.error('Approve hospital error:', error);
@@ -194,6 +307,19 @@ const suspendHospital = async (req, res) => {
 
     await hospital.save();
 
+    // Log Audit
+    await AuditLog.create({
+      actionType: 'SUSPEND',
+      performedBy: {
+        id: req.admin.id,
+        name: req.admin.name,
+        role: 'Admin'
+      },
+      entityType: 'HOSPITAL',
+      entityId: hospital._id,
+      details: `Hospital suspended. Reason: ${reason || 'Not specified'}`
+    });
+
     res.status(200).json({
       success: true,
       message: 'Hospital suspended successfully',
@@ -208,6 +334,57 @@ const suspendHospital = async (req, res) => {
     });
   }
 };
+
+// @desc    Reject hospital (Delete from DB)
+// @route   PUT /api/admin/hospitals/:id/reject
+// @access  Private (Admin)
+const rejectHospital = async (req, res) => {
+  try {
+    const hospital = await Hospital.findById(req.params.id);
+
+    if (!hospital) {
+      return res.status(404).json({
+        success: false,
+        message: 'Hospital not found'
+      });
+    }
+
+    // STRICT: Delete from DB
+    hospital.status = 'rejected';
+    if (req.body.reason) hospital.rejectionReason = req.body.reason;
+    hospital.approvedBy = req.admin.id; // Track who rejected it
+    hospital.approvedAt = new Date(); // Track when
+    hospital.isActive = false;
+    await hospital.save();
+
+    // Log Audit
+    await AuditLog.create({
+      actionType: 'REJECT',
+      performedBy: {
+        id: req.admin.id,
+        name: req.admin.name,
+        role: 'Admin'
+      },
+      entityType: 'HOSPITAL',
+      entityId: hospital._id,
+      details: 'Hospital rejected'
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Hospital rejected and removed from system',
+      data: {}
+    });
+
+  } catch (error) {
+    console.error('Reject hospital error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error rejecting hospital'
+    });
+  }
+};
+
 
 // @desc    Get all donors
 // @route   GET /api/admin/donors
@@ -387,6 +564,19 @@ const updateHospitalStatus = async (req, res) => {
 
     await hospital.save();
 
+    // Log Audit
+    await AuditLog.create({
+      actionType: status === 'suspended' ? 'SUSPEND' : 'UPDATE',
+      performedBy: {
+        id: req.admin.id,
+        name: req.admin.name,
+        role: 'Admin'
+      },
+      entityType: 'HOSPITAL',
+      entityId: hospital._id,
+      details: `Hospital status updated to ${status}`
+    });
+
     res.status(200).json({
       success: true,
       message: `Hospital ${status} successfully`,
@@ -402,13 +592,141 @@ const updateHospitalStatus = async (req, res) => {
   }
 };
 
+// @desc    Get donor analytics
+// @route   GET /api/admin/analytics/donors
+// @access  Private (Admin)
+const getDonorAnalytics = async (req, res) => {
+  try {
+    const totalDonors = await Donor.countDocuments();
+
+    const byBloodType = await Donor.aggregate([
+      { $group: { _id: '$medicalInfo.bloodType', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+
+    const byHospital = await Donor.aggregate([
+      {
+        $lookup: {
+          from: 'hospitals',
+          localField: 'registeredHospital',
+          foreignField: '_id',
+          as: 'hospital'
+        }
+      },
+      { $unwind: '$hospital' },
+      { $group: { _id: '$hospital.name', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
+    ]);
+
+    const byLocation = await Donor.aggregate([
+      { $group: { _id: '$personalInfo.address.state', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalDonors,
+        byBloodType,
+        byHospital,
+        byLocation
+      }
+    });
+  } catch (error) {
+    console.error('Donor analytics error:', error);
+    res.status(500).json({ success: false, message: 'Error fetching donor analytics' });
+  }
+};
+
+// @desc    Get hospital performance analytics
+// @route   GET /api/admin/analytics/hospital-performance
+// @access  Private (Admin)
+const getHospitalPerformance = async (req, res) => {
+  try {
+    const performance = await Hospital.aggregate([
+      { $match: { status: 'approved' } },
+      {
+        $lookup: {
+          from: 'requests',
+          localField: '_id',
+          foreignField: 'hospital',
+          as: 'requests'
+        }
+      },
+      {
+        $project: {
+          name: 1,
+          totalRequests: { $size: '$requests' },
+          completedRequests: {
+            $size: {
+              $filter: {
+                input: '$requests',
+                as: 'req',
+                cond: { $eq: ['$$req.status', 'completed'] }
+              }
+            }
+          }
+        }
+      },
+      {
+        $addFields: {
+          successRate: {
+            $cond: [
+              { $eq: ['$totalRequests', 0] },
+              0,
+              { $multiply: [{ $divide: ['$completedRequests', '$totalRequests'] }, 100] }
+            ]
+          }
+        }
+      },
+      { $sort: { successRate: -1 } },
+      { $limit: 20 }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: performance
+    });
+  } catch (error) {
+    console.error('Performance analytics error:', error);
+    res.status(500).json({ success: false, message: 'Error fetching performance' });
+  }
+};
+
+// @desc    Get audit logs
+// @route   GET /api/admin/audit
+// @access  Private (Admin)
+const getAuditLogs = async (req, res) => {
+  try {
+    const logs = await AuditLog.find()
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    res.status(200).json({
+      success: true,
+      data: logs
+    });
+  } catch (error) {
+    console.error('Audit logs error:', error);
+    res.status(500).json({ success: false, message: 'Error fetching audit logs' });
+  }
+};
+
+
 export {
   getDashboardStats,
   getHospitals,
+  getHospitalStats,
+  getHospitalDetails,
   approveHospital,
+  rejectHospital,
   suspendHospital,
   updateHospitalStatus,
   getDonors,
+  getDonorAnalytics,
   getRequests,
-  getTransplants
+  getTransplants,
+  getHospitalPerformance,
+  getAuditLogs
 };

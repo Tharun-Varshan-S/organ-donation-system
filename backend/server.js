@@ -62,8 +62,9 @@ app.get('/api/health', (req, res) => {
 // API Routes
 app.use('/api/admin', authRoutes); // Auth routes under /api/admin as per incoming
 app.use('/api/admin', adminRoutes); // Admin routes
-app.use('/api/hospital', hospitalRoutes); // Hospital routes
+app.use('/api/hospitals', hospitalRoutes); // Hospital routes
 app.use('/', generalRoutes); // Fallback to existing routes
+
 
 // Error handling middleware
 app.use(notFound);

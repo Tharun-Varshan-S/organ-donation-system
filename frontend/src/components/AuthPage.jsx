@@ -33,105 +33,75 @@ const AuthPage = () => {
 
     // Basic validation
     if (!formData.email || !formData.password) {
-      setStatusMessage({
-        text: 'Please fill in all required fields',
-        type: 'error'
+      setStatusMessage({ 
+        text: 'Please fill in all required fields', 
+        type: 'error' 
       })
       setIsLoading(false)
       return
     }
 
-    // Allow all roles to authenticate
-    // Restriction removed to enable hospital and user authentication
+    // Only handle admin authentication (as per backend scope)
+    if (selectedRole !== 'admin') {
+      setStatusMessage({ 
+        text: 'Only admin authentication is currently supported', 
+        type: 'error' 
+      })
+      setIsLoading(false)
+      return
+    }
 
     // Additional validation for registration
     if (authMode === 'register') {
       if (!formData.name) {
-        setStatusMessage({
-          text: 'Full name is required for registration',
-          type: 'error'
+        setStatusMessage({ 
+          text: 'Full name is required for registration', 
+          type: 'error' 
         })
         setIsLoading(false)
         return
       }
 
       if (!formData.secretKey) {
-        setStatusMessage({
-          text: 'Admin secret key is required for registration',
-          type: 'error'
+        setStatusMessage({ 
+          text: 'Admin secret key is required for registration', 
+          type: 'error' 
         })
         setIsLoading(false)
         return
       }
     }
 
-    // Call backend API based on selected role
+    // Call backend API
     try {
       let response
-
-      if (selectedRole === 'admin') {
-        // Admin authentication
-        if (authMode === 'login') {
-          response = await apiService.adminLogin(formData.email, formData.password)
-        } else {
-          response = await apiService.adminRegister(formData.email, formData.password, formData.name, formData.secretKey)
-        }
-      } else if (selectedRole === 'hospital') {
-        // Hospital authentication
-        if (authMode === 'login') {
-          response = await apiService.hospitalLogin(formData.email, formData.password)
-        } else {
-          // For hospital registration, pass the entire formData
-          response = await apiService.hospitalRegister({
-            name: formData.hospitalName || formData.name,
-            email: formData.email,
-            password: formData.password,
-            licenseNumber: formData.licenseNumber,
-            phone: formData.phone,
-            address: formData.address,
-            city: formData.city,
-            state: formData.state,
-            zipCode: formData.zipCode
-          })
-        }
+      
+      if (authMode === 'login') {
+        response = await apiService.adminLogin(formData.email, formData.password)
       } else {
-        // User authentication (placeholder for future implementation)
-        setStatusMessage({
-          text: 'User authentication coming soon',
-          type: 'error'
-        })
-        setIsLoading(false)
-        return
+        response = await apiService.adminRegister(formData.email, formData.password, formData.name, formData.secretKey)
       }
-
+      
       if (response.success) {
         if (authMode === 'login') {
-          if (selectedRole === 'admin') {
-            setIsAdminLoggedIn(true)
-            setStatusMessage({
-              text: 'Login successful! Redirecting to Admin Dashboard...',
-              type: 'success'
-            })
-          } else if (selectedRole === 'hospital') {
-            setStatusMessage({
-              text: 'Login successful! Welcome to Hospital Portal...',
-              type: 'success'
-            })
-            // TODO: Redirect to hospital dashboard
-          }
+          setIsAdminLoggedIn(true)
+          setStatusMessage({ 
+            text: 'Login successful! Redirecting to Admin Dashboard...', 
+            type: 'success' 
+          })
         } else {
-          setStatusMessage({
-            text: response.message || 'Registration successful! You can now login.',
-            type: 'success'
+          setStatusMessage({ 
+            text: 'Registration successful! You can now login.', 
+            type: 'success' 
           })
           setAuthMode('login')
         }
       }
-
+      
     } catch (error) {
-      setStatusMessage({
-        text: error.message || 'An error occurred. Please try again.',
-        type: 'error'
+      setStatusMessage({ 
+        text: error.message || 'An error occurred. Please try again.', 
+        type: 'error' 
       })
     } finally {
       setIsLoading(false)
@@ -165,11 +135,11 @@ const AuthPage = () => {
   return (
     <>
       <VideoBackground />
-
+      
       <main className="login-wrapper">
         <div className="login-card">
           {/* Role Selection */}
-          <RoleTabs
+          <RoleTabs 
             selectedRole={selectedRole}
             onRoleChange={handleRoleChange}
           />
