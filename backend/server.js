@@ -1,14 +1,18 @@
-const express = require('express');
-const cors = require('cors');
-const rateLimit = require('express-rate-limit');
-require('dotenv').config();
-
-const connectDB = require('./config/database');
-const { errorHandler, notFound } = require('./middleware/error');
+import express from 'express';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+import dotenv from 'dotenv';
+import connectDB from './config/database.js';
+import { errorHandler, notFound } from './middleware/error.js';
 
 // Route imports
-const authRoutes = require('./routes/auth');
-const adminRoutes = require('./routes/admin');
+import authRoutes from './routes/auth.js';
+import adminRoutes from './routes/admin.js';
+import hospitalRoutes from './routes/hospitals.js'; // Note: check filename
+import legacyHospitalRoutes from './routes/hospital.js'; // From remote
+import generalRoutes from './routes/route.js'; // From remote
+
+dotenv.config();
 
 // Connect to database
 connectDB();
@@ -52,7 +56,9 @@ app.get('/api/health', (req, res) => {
 // API Routes
 app.use('/api/admin', authRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/hospitals', require('./routes/hospitals'));
+app.use('/api/hospitals', hospitalRoutes);
+if (legacyHospitalRoutes) app.use('/api/legacy-hospitals', legacyHospitalRoutes);
+if (generalRoutes) app.use('/', generalRoutes);
 
 // Error handling middleware
 app.use(notFound);
@@ -61,7 +67,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 const server = app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+  console.log(`🚀 Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
   console.log(`📡 API Health Check: http://localhost:${PORT}/api/health`);
   console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL}`);
 });
@@ -74,4 +80,5 @@ process.on('unhandledRejection', (err, promise) => {
   });
 });
 
-module.exports = app;
+export default app;
+

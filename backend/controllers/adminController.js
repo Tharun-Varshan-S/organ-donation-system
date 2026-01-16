@@ -1,8 +1,9 @@
-const Hospital = require('../models/Hospital');
-const Donor = require('../models/Donor');
-const Request = require('../models/Request');
-const Transplant = require('../models/Transplant');
-const AuditLog = require('../models/AuditLog');
+import Hospital from '../models/Hospital.js';
+import Donor from '../models/Donor.js';
+import Request from '../models/Request.js';
+import Transplant from '../models/Transplant.js';
+import AuditLog from '../models/AuditLog.js';
+import Admin from '../models/Admin.js';
 
 // @desc    Get dashboard statistics
 // @route   GET /api/admin/dashboard/stats
@@ -98,7 +99,7 @@ const getDashboardStats = async (req, res) => {
 
     const successRate = t.total > 0 ? Math.round((t.successful / t.total) * 100) : 0;
 
-    // 5. Monthly Stats for Line Chart
+    // Monthly Stats
     const currentYear = new Date().getFullYear();
     const monthlyTransplants = await Transplant.aggregate([
       {
@@ -119,7 +120,7 @@ const getDashboardStats = async (req, res) => {
       { $sort: { '_id': 1 } }
     ]);
 
-    // 6. Organ Demand Distribution for Bar Chart
+    // Organ type distribution
     const organDistribution = await Request.aggregate([
       {
         $group: {
@@ -130,7 +131,7 @@ const getDashboardStats = async (req, res) => {
       { $sort: { count: -1 } }
     ]);
 
-    // 7. Recent Insight Panels
+    // Recent Insight Panels
     const recentApprovedHospitals = await Hospital.find({ status: 'approved' })
       .sort({ approvedAt: -1 })
       .limit(5)
@@ -173,7 +174,7 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
-// @desc    Get all hospitals (ENHANCED)
+// @desc    Get all hospitals
 // @route   GET /api/admin/hospitals
 // @access  Private (Admin)
 const getHospitals = async (req, res) => {
@@ -184,8 +185,7 @@ const getHospitals = async (req, res) => {
     let query = {};
     if (status) query.status = status;
     if (state) query['location.state'] = state;
-    if (city) query['location.city'] = { $regex: city, $options: 'i' }; // ENHANCED: City filter
-
+    if (city) query['location.city'] = { $regex: city, $options: 'i' };
     if (specialization) query.specializations = specialization;
 
     if (emergency === 'true') {
@@ -212,7 +212,6 @@ const getHospitals = async (req, res) => {
 
     const total = await Hospital.countDocuments(query);
 
-    // ENHANCED: Aggregate quick stats for each hospital
     const hospitalsWithStats = await Promise.all(hospitals.map(async (hospital) => {
       const donorCount = await Donor.countDocuments({ registeredHospital: hospital._id });
       const requestCount = await Request.countDocuments({ hospital: hospital._id });
@@ -279,18 +278,15 @@ const getHospitals = async (req, res) => {
   }
 };
 
-
 // @desc    Get hospital statistics and groupings
 // @route   GET /api/admin/hospitals/stats
 // @access  Private (Admin)
 const getHospitalStats = async (req, res) => {
   try {
-    // 1. Overall Status Counts
     const statusCounts = await Hospital.aggregate([
       { $group: { _id: '$status', count: { $sum: 1 } } }
     ]);
 
-    // 2. Region-wise (State) Counts
     const regionStats = await Hospital.aggregate([
       {
         $group: {
@@ -304,7 +300,6 @@ const getHospitalStats = async (req, res) => {
       { $sort: { totalHospitals: -1 } }
     ]);
 
-    // 3. Specialization-wise Counts
     const specializationStats = await Hospital.aggregate([
       { $unwind: '$specializations' },
       {
@@ -316,7 +311,6 @@ const getHospitalStats = async (req, res) => {
       { $sort: { count: -1 } }
     ]);
 
-    // 4. Emergency Count
     const emergencyCount = await Hospital.countDocuments({
       'contactInfo.emergencyPhone': { $exists: true, $ne: '' },
       'capacity.availableBeds': { $gt: 0 }
@@ -347,7 +341,7 @@ const getHospitalStats = async (req, res) => {
   }
 };
 
-// @desc    Get single hospital details (ENHANCED)
+// @desc    Get single hospital details
 // @route   GET /api/admin/hospitals/:id
 // @access  Private (Admin)
 const getHospitalDetails = async (req, res) => {
@@ -362,11 +356,9 @@ const getHospitalDetails = async (req, res) => {
       });
     }
 
-    // Get additional stats for hospital
     const donorCount = await Donor.countDocuments({ registeredHospital: hospital._id });
     const requestCount = await Request.countDocuments({ hospital: hospital._id });
 
-    // Success Rate calculation
     const transplantStats = await Transplant.aggregate([
       {
         $match: {
@@ -405,7 +397,6 @@ const getHospitalDetails = async (req, res) => {
       successRate: transplantStats[0] ? Math.round((transplantStats[0].successful / transplantStats[0].total) * 100) : 0
     };
 
-    // ENHANCED: Activity Timeline (Comprehensive)
     const requests = await Request.find({ hospital: hospital._id })
       .sort({ createdAt: -1 })
       .limit(10)
@@ -421,7 +412,6 @@ const getHospitalDetails = async (req, res) => {
       .limit(10)
       .select('transplantId organType status outcome.success createdAt updatedAt');
 
-    // ENHANCED: Status Change History (Audit Trail)
     const statusHistory = await AuditLog.find({
       entityType: 'HOSPITAL',
       entityId: hospital._id
@@ -430,7 +420,6 @@ const getHospitalDetails = async (req, res) => {
       .limit(20)
       .select('actionType performedBy details createdAt');
 
-    // ENHANCED: Build comprehensive timeline
     const timeline = [
       {
         type: 'REGISTRATION',
@@ -468,7 +457,6 @@ const getHospitalDetails = async (req, res) => {
       }))
     ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 50);
 
-    // ENHANCED: Reviews aggregation
     const reviewStats = hospital.reviews && hospital.reviews.length > 0 ? {
       averageRating: (hospital.reviews.reduce((sum, r) => sum + r.rating, 0) / hospital.reviews.length).toFixed(1),
       totalReviews: hospital.reviews.length,
@@ -488,7 +476,7 @@ const getHospitalDetails = async (req, res) => {
         stats,
         timeline,
         reviewStats,
-        requests, // Added all requests
+        requests,
         recentActivity: {
           requests: requests.slice(0, 5),
           transplants: transplants.slice(0, 5)
@@ -504,7 +492,6 @@ const getHospitalDetails = async (req, res) => {
     });
   }
 };
-
 
 // @desc    Approve hospital
 // @route   PUT /api/admin/hospitals/:id/approve
@@ -523,11 +510,10 @@ const approveHospital = async (req, res) => {
     hospital.status = 'approved';
     hospital.approvedBy = req.admin.id;
     hospital.approvedAt = new Date();
-    hospital.isActive = true; // Ensure active access enabled
+    hospital.isActive = true;
 
     await hospital.save();
 
-    // Log Audit
     await AuditLog.create({
       actionType: 'APPROVE',
       performedBy: {
@@ -555,7 +541,55 @@ const approveHospital = async (req, res) => {
   }
 };
 
-// @desc    Reject hospital (Delete from DB)
+// @desc    Suspend hospital
+// @route   PUT /api/admin/hospitals/:id/suspend
+// @access  Private (Admin)
+const suspendHospital = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const hospital = await Hospital.findById(req.params.id);
+
+    if (!hospital) {
+      return res.status(404).json({
+        success: false,
+        message: 'Hospital not found'
+      });
+    }
+
+    hospital.status = 'suspended';
+    hospital.isActive = false;
+    if (reason) hospital.suspensionReason = reason;
+
+    await hospital.save();
+
+    await AuditLog.create({
+      actionType: 'SUSPEND',
+      performedBy: {
+        id: req.admin.id,
+        name: req.admin.name,
+        role: 'Admin'
+      },
+      entityType: 'HOSPITAL',
+      entityId: hospital._id,
+      details: `Hospital suspended. Reason: ${reason || 'Not specified'}`
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Hospital suspended successfully',
+      data: hospital
+    });
+
+  } catch (error) {
+    console.error('Suspend hospital error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error suspending hospital'
+    });
+  }
+};
+
+// @desc    Reject hospital
 // @route   PUT /api/admin/hospitals/:id/reject
 // @access  Private (Admin)
 const rejectHospital = async (req, res) => {
@@ -569,15 +603,13 @@ const rejectHospital = async (req, res) => {
       });
     }
 
-    // STRICT: Delete from DB
     hospital.status = 'rejected';
     if (req.body.reason) hospital.rejectionReason = req.body.reason;
-    hospital.approvedBy = req.admin.id; // Track who rejected it
-    hospital.approvedAt = new Date(); // Track when
+    hospital.approvedBy = req.admin.id;
+    hospital.approvedAt = new Date();
     hospital.isActive = false;
     await hospital.save();
 
-    // Log Audit
     await AuditLog.create({
       actionType: 'REJECT',
       performedBy: {
@@ -612,7 +644,6 @@ const getDonors = async (req, res) => {
   try {
     const { page = 1, limit = 10, status, bloodType } = req.query;
 
-    // Build query
     let query = {};
     if (status) query.status = status;
     if (bloodType) query['medicalInfo.bloodType'] = bloodType;
@@ -625,7 +656,6 @@ const getDonors = async (req, res) => {
 
     const total = await Donor.countDocuments(query);
 
-    // Get blood type distribution
     const bloodTypeStats = await Donor.aggregate([
       {
         $group: {
@@ -644,7 +674,7 @@ const getDonors = async (req, res) => {
         donors,
         bloodTypeStats,
         pagination: {
-          current: page,
+          current: Number(page),
           pages: Math.ceil(total / limit),
           total
         }
@@ -667,7 +697,6 @@ const getRequests = async (req, res) => {
   try {
     const { page = 1, limit = 10, status, organType, urgency, hospitalId } = req.query;
 
-    // Build query
     let query = {};
     if (status) query.status = status;
     if (organType) query.organType = organType;
@@ -711,7 +740,6 @@ const getTransplants = async (req, res) => {
   try {
     const { page = 1, limit = 10, status, organType, hospitalId } = req.query;
 
-    // Build query
     let query = {};
     if (status) query.status = status;
     if (organType) query.organType = organType;
@@ -735,7 +763,6 @@ const getTransplants = async (req, res) => {
 
     const total = await Transplant.countDocuments(query);
 
-    // Get stats for transplants
     const stats = await Transplant.aggregate([
       {
         $group: {
@@ -809,7 +836,6 @@ const updateHospitalStatus = async (req, res) => {
 
     await hospital.save();
 
-    // Log Audit
     await AuditLog.create({
       actionType: status === 'suspended' ? 'SUSPEND' : 'UPDATE',
       performedBy: {
@@ -844,20 +870,17 @@ const getDonorAnalytics = async (req, res) => {
   try {
     const totalDonors = await Donor.countDocuments();
 
-    // 1. By Blood Type
     const byBloodType = await Donor.aggregate([
       { $group: { _id: '$medicalInfo.bloodType', count: { $sum: 1 } } },
       { $sort: { count: -1 } }
     ]);
 
-    // 2. By Organ Type (Unwinding organTypes array)
     const byOrganType = await Donor.aggregate([
       { $unwind: '$donationPreferences.organTypes' },
       { $group: { _id: '$donationPreferences.organTypes', count: { $sum: 1 } } },
       { $sort: { count: -1 } }
     ]);
 
-    // 3. By Hospital
     const byHospital = await Donor.aggregate([
       {
         $lookup: {
@@ -873,7 +896,6 @@ const getDonorAnalytics = async (req, res) => {
       { $limit: 10 }
     ]);
 
-    // 4. By Location (State)
     const byLocation = await Donor.aggregate([
       { $group: { _id: '$location.state', count: { $sum: 1 } } },
       { $match: { _id: { $ne: null } } },
@@ -951,6 +973,8 @@ const getHospitalPerformance = async (req, res) => {
   }
 };
 
+// @desc    Get audit logs
+// @route   GET /api/admin/audit
 // @access  Private (Admin)
 const getAuditLogs = async (req, res) => {
   try {
@@ -973,7 +997,6 @@ const getAuditLogs = async (req, res) => {
 // @access  Private (Admin)
 const getSystemReports = async (req, res) => {
   try {
-    // 1. Organ Demand vs Availability
     const demand = await Request.aggregate([
       { $group: { _id: '$organType', count: { $sum: 1 } } }
     ]);
@@ -982,7 +1005,6 @@ const getSystemReports = async (req, res) => {
       { $group: { _id: '$donationPreferences.organTypes', count: { $sum: 1 } } }
     ]);
 
-    // 2. Hospital Performance Comparison
     const hospitalPerformance = await Hospital.aggregate([
       { $match: { status: 'approved' } },
       {
@@ -1023,13 +1045,11 @@ const getSystemReports = async (req, res) => {
       { $limit: 10 }
     ]);
 
-    // 3. Regional Donor Availability
     const regionalDonors = await Donor.aggregate([
       { $group: { _id: '$location.state', count: { $sum: 1 } } },
       { $sort: { count: -1 } }
     ]);
 
-    // 4. Monthly Trends (Combined Requests and Transplants)
     const currentYear = new Date().getFullYear();
     const monthlyTrends = await Request.aggregate([
       {
@@ -1069,7 +1089,6 @@ const getSystemReports = async (req, res) => {
 // @access  Private (Admin)
 const getSettings = async (req, res) => {
   try {
-    const Admin = require('../models/Admin');
     const admin = await Admin.findById(req.admin.id).select('settings');
     res.status(200).json({ success: true, data: admin.settings });
   } catch (error) {
@@ -1082,7 +1101,6 @@ const getSettings = async (req, res) => {
 // @access  Private (Admin)
 const updateSettings = async (req, res) => {
   try {
-    const Admin = require('../models/Admin');
     const admin = await Admin.findById(req.admin.id);
     admin.settings = { ...admin.settings, ...req.body };
     await admin.save();
@@ -1092,13 +1110,14 @@ const updateSettings = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   getDashboardStats,
   getHospitals,
   getHospitalStats,
   getHospitalDetails,
   approveHospital,
   rejectHospital,
+  suspendHospital,
   updateHospitalStatus,
   getDonors,
   getDonorAnalytics,

@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 const hospitalSchema = new mongoose.Schema({
   name: {
@@ -9,13 +9,20 @@ const hospitalSchema = new mongoose.Schema({
   },
   image: {
     type: String,
-    default: 'https://images.unsplash.com/photo-1538108149393-fbbd81895907?auto=format&fit=crop&q=80&w=1000' // Mock default
+    default: 'https://images.unsplash.com/photo-1538108149393-fbbd81895907?auto=format&fit=crop&q=80&w=1000'
   },
   email: {
     type: String,
     required: [true, 'Email is required'],
     unique: true,
-    lowercase: true
+    lowercase: true,
+    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
+  },
+  password: {
+    type: String,
+    required: [true, 'Password is required'],
+    minlength: [6, 'Password must be at least 6 characters'],
+    select: false
   },
   licenseNumber: {
     type: String,
@@ -31,7 +38,6 @@ const hospitalSchema = new mongoose.Schema({
       latitude: Number,
       longitude: Number
     },
-    // Enhanced: For admin map rendering
     latitude: Number,
     longitude: Number,
     region: String
@@ -50,19 +56,17 @@ const hospitalSchema = new mongoose.Schema({
     default: 'pending'
   },
   specializations: [String],
-  // Enhanced: Admin-only aggregated stats
   stats: {
     donorCount: { type: Number, default: 0 },
     requestCount: { type: Number, default: 0 },
     successfulTransplants: { type: Number, default: 0 },
     successRate: { type: Number, default: 0 }
   },
-  // Enhanced: User reviews (read-only for admins)
   reviews: [{
     rating: { type: Number, min: 1, max: 5 },
     comment: String,
     verified: { type: Boolean, default: false },
-    reviewerMasked: String, // Masked identity
+    reviewerMasked: String,
     createdAt: { type: Date, default: Date.now }
   }],
   isActive: {
@@ -76,28 +80,24 @@ const hospitalSchema = new mongoose.Schema({
   approvedAt: Date,
   rejectionReason: String,
   suspensionReason: String,
-  password: {
-    type: String,
-    required: [true, 'Password is required'],
-    select: false
+  lastLogin: {
+    type: Date
   }
 }, {
   timestamps: true
 });
 
-// Encrypt password using bcrypt
+// Hash password before saving
 hospitalSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
-    next();
-  }
-
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 12);
+  next();
 });
 
 // Match user entered password to hashed password in database
-hospitalSchema.methods.comparePassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+hospitalSchema.methods.comparePassword = async function (candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
 };
 
-module.exports = mongoose.model('Hospital', hospitalSchema);
+export default mongoose.model('Hospital', hospitalSchema);
+

@@ -1,10 +1,10 @@
-const express = require('express');
-const {
+import express from 'express';
+import {
     hospitalRegister,
     hospitalLogin,
     getPublicHospitals,
     getPublicHospitalById
-} = require('../controllers/authController');
+} from '../controllers/authController.js';
 
 const router = express.Router();
 
@@ -16,4 +16,4 @@ router.get('/:id', getPublicHospitalById);
 router.post('/register', hospitalRegister);
 router.post('/login', hospitalLogin);
 
-module.exports = router;
+export default router;

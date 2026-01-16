@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const requestSchema = new mongoose.Schema({
   requestId: {
@@ -52,7 +52,7 @@ const requestSchema = new mongoose.Schema({
 });
 
 // Generate unique request ID
-requestSchema.pre('save', async function(next) {
+requestSchema.pre('save', async function (next) {
   if (!this.requestId) {
     const year = new Date().getFullYear();
     const count = await this.constructor.countDocuments();
@@ -61,4 +61,5 @@ requestSchema.pre('save', async function(next) {
   next();
 });
 
-module.exports = mongoose.model('Request', requestSchema);
+export default mongoose.model('Request', requestSchema);
+

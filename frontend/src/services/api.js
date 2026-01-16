@@ -61,6 +61,33 @@ class ApiService {
     return this.handleResponse(response)
   }
 
+  // Hospital Authentication
+  async hospitalLogin(email, password) {
+    const response = await fetch(`${API_BASE_URL}/hospitals/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    })
+
+    const data = await this.handleResponse(response)
+
+    if (data.success && data.token) {
+      this.setToken(data.token)
+    }
+
+    return data
+  }
+
+  async hospitalRegister(formData) {
+    const response = await fetch(`${API_BASE_URL}/hospitals/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    })
+
+    return this.handleResponse(response)
+  }
+
   // Dashboard Stats
   async getDashboardStats() {
     const response = await fetch(`${API_BASE_URL}/admin/dashboard/stats`, {
@@ -78,7 +105,7 @@ class ApiService {
     if (status) url += `&status=${status}`;
     if (search) url += `&search=${encodeURIComponent(search)}`;
     if (state) url += `&state=${encodeURIComponent(state)}`;
-    if (city) url += `&city=${encodeURIComponent(city)}`; // ENHANCED: City filter
+    if (city) url += `&city=${encodeURIComponent(city)}`;
     if (specialization) url += `&specialization=${encodeURIComponent(specialization)}`;
     if (emergency) url += `&emergency=true`;
 

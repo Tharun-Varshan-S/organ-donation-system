@@ -1,11 +1,11 @@
-const jwt = require('jsonwebtoken');
-const Admin = require('../models/Admin');
-const Hospital = require('../models/Hospital');
+import jwt from 'jsonwebtoken';
+import Admin from '../models/Admin.js';
+import Hospital from '../models/Hospital.js';
 
 // Generate JWT Token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE
+    expiresIn: process.env.JWT_EXPIRE || '7d'
   });
 };
 
@@ -55,8 +55,8 @@ const adminRegister = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Admin registration successful',
+      token,
       data: {
-        token,
         admin: {
           id: admin._id,
           name: admin.name,
@@ -78,7 +78,7 @@ const adminRegister = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: 'Server error during registration'
+      message: error.message || 'Server error during registration'
     });
   }
 };
@@ -90,7 +90,6 @@ const adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validation
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -98,7 +97,6 @@ const adminLogin = async (req, res) => {
       });
     }
 
-    // Check if admin exists
     const admin = await Admin.findOne({ email }).select('+password');
 
     if (!admin) {
@@ -108,7 +106,6 @@ const adminLogin = async (req, res) => {
       });
     }
 
-    // Check if admin is active
     if (!admin.isActive) {
       return res.status(401).json({
         success: false,
@@ -116,9 +113,7 @@ const adminLogin = async (req, res) => {
       });
     }
 
-    // Check password
     const isPasswordMatch = await admin.comparePassword(password);
-
     if (!isPasswordMatch) {
       return res.status(401).json({
         success: false,
@@ -126,23 +121,23 @@ const adminLogin = async (req, res) => {
       });
     }
 
-    // Update last login
     admin.lastLogin = new Date();
     await admin.save();
 
-    // Generate token
     const token = generateToken(admin._id);
 
     res.status(200).json({
       success: true,
       message: 'Login successful',
       token,
-      admin: {
-        id: admin._id,
-        name: admin.name,
-        email: admin.email,
-        role: admin.role,
-        lastLogin: admin.lastLogin
+      data: {
+        admin: {
+          id: admin._id,
+          name: admin.name,
+          email: admin.email,
+          role: admin.role,
+          lastLogin: admin.lastLogin
+        }
       }
     });
 
@@ -402,7 +397,7 @@ const getPublicHospitalById = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   adminRegister,
   adminLogin,
   getAdminProfile,

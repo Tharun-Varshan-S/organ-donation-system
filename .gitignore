@@ -1,12 +1,19 @@
 # Dependencies
 node_modules/
+
+# Logs
+logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
+build_error.log
 
 # Build outputs
 dist/
+dist-ssr
 build/
 *.tsbuildinfo
 
@@ -16,13 +23,20 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*
+!.env.example
 
 # IDE and editor files
 .vscode/
 .idea/
+*.sw?
 *.swp
 *.swo
 *~
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
 
 # OS generated files
 .DS_Store
@@ -32,10 +46,6 @@ build/
 .Trashes
 ehthumbs.db
 Thumbs.db
-
-# Logs
-logs
-*.log
 
 # Runtime data
 pids
@@ -50,3 +60,6 @@ coverage/
 # Temporary folders
 tmp/
 temp/
+
+# Vite
+*.timestamp-*

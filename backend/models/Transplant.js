@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const transplantSchema = new mongoose.Schema({
   transplantId: {
@@ -64,7 +64,7 @@ const transplantSchema = new mongoose.Schema({
 });
 
 // Generate unique transplant ID
-transplantSchema.pre('save', async function(next) {
+transplantSchema.pre('save', async function (next) {
   if (!this.transplantId) {
     const year = new Date().getFullYear();
     const count = await this.constructor.countDocuments();
@@ -73,4 +73,5 @@ transplantSchema.pre('save', async function(next) {
   next();
 });
 
-module.exports = mongoose.model('Transplant', transplantSchema);
+export default mongoose.model('Transplant', transplantSchema);
+

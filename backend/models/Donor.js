@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const donorSchema = new mongoose.Schema({
   personalInfo: {
@@ -51,4 +51,5 @@ const donorSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Donor', donorSchema);
+export default mongoose.model('Donor', donorSchema);
+

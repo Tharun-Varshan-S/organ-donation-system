@@ -4,6 +4,8 @@ import RoleTabs from './RoleTabs'
 import AuthForm from './AuthForm'
 import AdminDashboard from './AdminDashboard'
 import apiService from '../services/api'
+import { useAuth } from '../landing/contexts/AuthContext'
+import { useNavigate } from 'react-router-dom'
 import './AuthPage.css'
 
 const AuthPage = () => {
@@ -13,6 +15,9 @@ const AuthPage = () => {
   const [statusMessage, setStatusMessage] = useState({ text: '', type: '' })
   const [isLoading, setIsLoading] = useState(false)
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(!!localStorage.getItem('adminToken'))
+
+  const { login } = useAuth()
+  const navigate = useNavigate()
 
   // Handle role change with animation
   const handleRoleChange = (roleKey) => {
@@ -41,64 +46,82 @@ const AuthPage = () => {
       return
     }
 
-    // Only handle admin authentication (as per backend scope)
-    if (selectedRole !== 'admin') {
-      setStatusMessage({
-        text: 'Only admin authentication is currently supported',
-        type: 'error'
-      })
+    // Handle User Login (Mock)
+    if (selectedRole === 'user') {
+      try {
+        await login(formData.email, formData.password, 'user')
+        setStatusMessage({
+          text: 'Login successful! Redirecting...',
+          type: 'success'
+        })
+        setTimeout(() => navigate('/'), 1000)
+      } catch (e) {
+        setStatusMessage({ text: 'Login failed', type: 'error' })
+      }
       setIsLoading(false)
       return
-    }
-
-    // Additional validation for registration
-    if (authMode === 'register') {
-      if (!formData.name) {
-        setStatusMessage({
-          text: 'Full name is required for registration',
-          type: 'error'
-        })
-        setIsLoading(false)
-        return
-      }
-
-      if (!formData.secretKey) {
-        setStatusMessage({
-          text: 'Admin secret key is required for registration',
-          type: 'error'
-        })
-        setIsLoading(false)
-        return
-      }
     }
 
     // Call backend API
     try {
       let response
 
-      if (authMode === 'login') {
-        response = await apiService.adminLogin(formData.email, formData.password)
-      } else {
-        response = await apiService.adminRegister(formData.email, formData.password, formData.name, formData.secretKey)
+      if (selectedRole === 'admin') {
+        if (authMode === 'login') {
+          response = await apiService.adminLogin(formData.email, formData.password)
+        } else {
+          if (!formData.secretKey) throw new Error('Secret key required')
+          response = await apiService.adminRegister(formData.email, formData.password, formData.name, formData.secretKey)
+        }
+      } else if (selectedRole === 'hospital') {
+        if (authMode === 'login') {
+          response = await apiService.hospitalLogin(formData.email, formData.password)
+        } else {
+          response = await apiService.hospitalRegister({
+            name: formData.hospitalName,
+            email: formData.email,
+            password: formData.password,
+            licenseNumber: formData.licenseNumber,
+            phone: formData.name, // Placeholder contact
+            // Defaults for required backend fields
+            address: 'Pending Update',
+            city: 'Pending',
+            state: 'Pending'
+          })
+        }
       }
 
-      if (response.success) {
+      if (response && response.success) {
         if (authMode === 'login') {
-          setIsAdminLoggedIn(true)
-          setStatusMessage({
-            text: 'Login successful! Redirecting to Admin Dashboard...',
-            type: 'success'
-          })
+          if (selectedRole === 'admin') {
+            setIsAdminLoggedIn(true)
+            setStatusMessage({
+              text: 'Login successful! Redirecting to Admin Dashboard...',
+              type: 'success'
+            })
+          } else if (selectedRole === 'hospital') {
+            await login(formData.email, formData.password, 'hospital')
+            setStatusMessage({
+              text: 'Login successful! Redirecting to Hospital Dashboard...',
+              type: 'success'
+            })
+            setTimeout(() => navigate('/hospitals'), 1000)
+          }
         } else {
           setStatusMessage({
-            text: 'Registration successful! You can now login.',
+            text: 'Registration successful! ' + (selectedRole === 'hospital' ? 'Please wait for admin approval.' : 'You can now login.'),
             type: 'success'
           })
           setAuthMode('login')
         }
+      } else {
+        if (response && !response.success) {
+          throw new Error(response.message || 'Operation failed')
+        }
       }
 
     } catch (error) {
+      console.error(error)
       setStatusMessage({
         text: error.message || 'An error occurred. Please try again.',
         type: 'error'

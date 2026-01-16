@@ -1,6 +1,6 @@
-const express = require('express');
-const { adminRegister, adminLogin, getAdminProfile } = require('../controllers/authController');
-const { protect, adminOnly } = require('../middleware/auth');
+import express from 'express';
+import { adminRegister, adminLogin, getAdminProfile } from '../controllers/authController.js';
+import { protect, adminOnly } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -13,4 +13,5 @@ router.post('/login', adminLogin);
 // @route   GET /api/admin/profile
 router.get('/profile', protect, adminOnly, getAdminProfile);
 
-module.exports = router;
+export default router;
+

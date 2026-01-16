@@ -1,0 +1,252 @@
+/* ============================================
+   ENHANCED ADMIN DASHBOARD - MEDICAL GRADE UI
+   Version 2.1 - Contrast & Spacing Refinement
+   ============================================ */
+
+:root {
+    /* Primary Color System */
+    --color-bg-primary: #f4f7fa;
+    /* Clean medical dashboard background */
+    --color-bg-secondary: #ffffff;
+    --color-sidebar-bg: #ffffff;
+    --color-topbar-bg: rgba(255, 255, 255, 0.95);
+
+    --color-text-primary: #1e293b;
+    /* Rich Navy */
+    --color-text-secondary: #475569;
+    /* Darker Slate for icons/subtext */
+    --color-text-muted: #94a3b8;
+
+    --color-accent: #2563eb;
+    /* Focused Medical Blue */
+    --color-accent-soft: #eff6ff;
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-error: #ef4444;
+
+    /* Elevation */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+    /* Navy tinted shadows */
+    --shadow-lg: 0 15px 35px -5px rgba(15, 23, 42, 0.12);
+}
+
+/* Base Fixes */
+.admin-dashboard {
+    background-color: var(--color-bg-primary) !important;
+}
+
+.main-content {
+    background-color: var(--color-bg-primary) !important;
+    min-height: 100vh;
+}
+
+/* ============================================
+   SIDEBAR REFINEMENT
+   ============================================ */
+.sidebar {
+    background-color: var(--color-sidebar-bg) !important;
+    border-right: 1px solid rgba(226, 232, 240, 0.8) !important;
+    box-shadow: 10px 0 30px rgba(15, 23, 42, 0.03) !important;
+    padding: 32px 20px !important;
+    width: 260px !important;
+    /* Slightly wider for better breathing room */
+}
+
+.sidebar-header {
+    margin-bottom: 40px !important;
+    padding: 0 10px !important;
+}
+
+.sidebar-header h1 {
+    color: var(--color-accent) !important;
+    font-size: 18px !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px !important;
+    font-weight: 900 !important;
+}
+
+.nav-item {
+    color: var(--color-text-secondary) !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    padding: 12px 16px !important;
+    margin-bottom: 6px !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 14px !important;
+}
+
+.nav-item svg {
+    color: var(--color-text-secondary);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.nav-item:hover {
+    background-color: var(--color-accent-soft) !important;
+    color: var(--color-accent) !important;
+    transform: translateX(4px);
+}
+
+.nav-item:hover svg {
+    color: var(--color-accent);
+    transform: scale(1.1);
+}
+
+.nav-item.active {
+    background: linear-gradient(135deg, var(--color-accent) 0%, #1d4ed8 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 8px 20px -6px rgba(37, 99, 235, 0.45) !important;
+}
+
+.nav-item.active svg {
+    color: #ffffff !important;
+}
+
+/* ============================================
+   TOP BAR & SEARCH
+   ============================================ */
+.top-bar {
+    padding: 0 40px !important;
+    height: 80px !important;
+    background: var(--color-topbar-bg) !important;
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.6) !important;
+}
+
+.search-box {
+    background-color: #f8fafc !important;
+    border: 1.5px solid #edf2f7 !important;
+    padding: 10px 18px !important;
+    max-width: 460px !important;
+    transition: all 0.3s ease;
+}
+
+.search-box:focus-within {
+    border-color: var(--color-accent) !important;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1) !important;
+    background-color: #ffffff !important;
+}
+
+/* ============================================
+   DASHBOARD CARDS
+   ============================================ */
+.stat-card {
+    padding: 24px !important;
+    border: 1px solid rgba(226, 232, 240, 0.5) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+.stat-icon {
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 16px !important;
+}
+
+.stat-value {
+    font-size: 28px !important;
+    letter-spacing: -0.75px !important;
+    color: var(--color-text-primary) !important;
+}
+
+.stat-label {
+    color: var(--color-text-secondary) !important;
+    font-weight: 700 !important;
+    font-size: 12px !important;
+}
+
+/* ============================================
+   TABLE ENHANCEMENTS (VISIBILITY FIX)
+   ============================================ */
+.table-wrapper {
+    border-radius: 16px !important;
+    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+}
+
+.admin-table thead {
+    background-color: #f8fafc !important;
+}
+
+.admin-table th {
+    color: var(--color-text-primary) !important;
+    /* Navy for high contrast */
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    padding: 16px 20px !important;
+    border-bottom: 2px solid #edf2f7 !important;
+    background-color: #f8fafc !important;
+}
+
+.admin-table td {
+    padding: 18px 20px !important;
+    color: #334155 !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.admin-table tbody tr:hover {
+    background-color: #fcfdfe !important;
+}
+
+/* ============================================
+   HOSPITAL DETAIL PAGE - PREMIUM BACK BUTTON
+   ============================================ */
+.btn-back {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    background-color: #f1f5f9 !important;
+    color: #475569 !important;
+    padding: 8px 18px !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+    border: 1px solid #e2e8f0 !important;
+    transition: all 0.2s ease !important;
+}
+
+.btn-back:hover {
+    background-color: #ffffff !important;
+    color: var(--color-accent) !important;
+    box-shadow: var(--shadow-sm) !important;
+    transform: translateX(-2px);
+}
+
+/* ============================================
+   CHART CUSTOMIZATION
+   ============================================ */
+.recharts-tooltip-cursor {
+    fill: rgba(37, 99, 235, 0.05) !important;
+}
+
+.chart-card {
+    padding: 30px !important;
+}
+
+/* ============================================
+   STATUS BADGES - REFINED
+   ============================================ */
+.status-badge {
+    padding: 6px 14px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.2px;
+}
+
+/* SKELETON REFINEMENT */
+.skeleton {
+    opacity: 0.6;
+}
+
+/* Fix for the main content area padding */
+.main-content {
+    margin-left: 260px !important;
+}
+
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 220px !important;
+    }
+
+    .main-content {
+        margin-left: 220px !important;
+    }
+}
