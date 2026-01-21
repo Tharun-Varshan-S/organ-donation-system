@@ -39,9 +39,10 @@ const protect = async (req, res, next) => {
       if (!hospital.isActive) {
         return res.status(401).json({ success: false, message: 'Hospital account is deactivated.' });
       }
-      if (hospital.status !== 'approved') {
-        return res.status(403).json({ success: false, message: `Hospital account is ${hospital.status}.` });
-      }
+      // Note: We do NOT check for 'approved' status here. 
+      // This allows pending hospitals to have a valid session (e.g. for a "Status Check" page).
+      // Use ensureApproved middleware for restricted routes.
+
       req.user = hospital;
       req.hospital = hospital;
       req.userType = 'hospital';
@@ -82,6 +83,18 @@ const hospitalOnly = (req, res, next) => {
   }
 };
 
+// Ensure Hospital is Approved
+const ensureApproved = (req, res, next) => {
+  if (req.hospital && req.hospital.status === 'approved') {
+    next();
+  } else {
+    res.status(403).json({
+      success: false,
+      message: `Access denied. Hospital account status is: ${req.hospital ? req.hospital.status : 'unknown'}.`
+    });
+  }
+};
+
 // Keep protectHospital as alias for backward compatibility if needed
 const protectHospital = protect;
 
@@ -89,5 +102,6 @@ export {
   protect,
   adminOnly,
   hospitalOnly,
+  ensureApproved,
   protectHospital
 };

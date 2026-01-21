@@ -1,0 +1,134 @@
+.requests-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.requests-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.request-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid #e2e8f0;
+    transition: transform 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.request-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.request-card.border-red-500 {
+    border-left: 4px solid #ef4444;
+}
+
+.request-card.border-orange-500 {
+    border-left: 4px solid #f97316;
+}
+
+.request-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.organ-badge {
+    background: #e2e8f0;
+    padding: 0.25rem 0.75rem;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.urgency-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.urgency-badge.critical {
+    color: #dc2626;
+    background: #fee2e2;
+}
+
+.urgency-badge.high {
+    color: #ea580c;
+    background: #ffedd5;
+}
+
+.urgency-badge.medium {
+    color: #0284c7;
+    background: #e0f2fe;
+}
+
+.patient-info h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #1e293b;
+}
+
+.patient-meta {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-top: 0.25rem;
+}
+
+.blood-type {
+    font-weight: 700;
+    color: #ef4444;
+}
+
+.sla-timer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.request-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
+
+.status-text {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    text-transform: capitalize;
+}
+
+.full-width {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.mt-2 {
+    margin-top: 0.5rem;
+}
