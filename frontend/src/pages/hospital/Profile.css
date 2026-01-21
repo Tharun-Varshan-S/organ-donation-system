@@ -4,15 +4,35 @@
     gap: 2rem;
 }
 
+/* Profile Form Styles */
 .profile-form {
     background: white;
-    padding: 2rem;
-    border-radius: 12px;
+    padding: 2.5rem;
+    border-radius: 16px;
     border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.form-section {
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px dashed #e2e8f0;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.form-section h3 {
+    font-size: 1.1rem;
+    color: #1e293b;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
 }
 
 .form-row {
-    margin-bottom: 1rem;
+    margin-bottom: 1.25rem;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -26,30 +46,51 @@
 
 .form-row input,
 .form-row select {
-    padding: 0.75rem;
-    border-radius: 6px;
+    padding: 0.875rem;
+    border-radius: 8px;
     border: 1px solid #cbd5e1;
+    font-size: 0.95rem;
+    color: #1e293b;
+    background: #f8fafc;
+    transition: all 0.2s;
+    width: 100%;
+}
+
+.form-row input:focus {
+    outline: none;
+    border-color: #0ea5e9;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
 }
 
 .disabled-input {
     background: #f1f5f9;
     color: #94a3b8;
+    cursor: not-allowed;
+    border-color: #e2e8f0;
 }
 
 .emergency-input {
-    border-color: #fca5a5;
-    background: #fef2f2;
+    /* Removed pink background, use normal styling unless specific error */
 }
 
 .save-btn {
     background: #0ea5e9;
     color: white;
     border: none;
-    padding: 0.75rem 2rem;
+    padding: 1rem 2.5rem;
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
     margin-top: 1rem;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.save-btn:hover {
+    background: #0284c7;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(14, 165, 233, 0.2);
 }
 
 .map-section {
@@ -63,4 +104,5 @@
     margin-top: 1rem;
     border-radius: 8px;
     overflow: hidden;
+    border: 1px solid #e2e8f0;
 }
