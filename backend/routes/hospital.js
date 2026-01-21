@@ -1,7 +1,5 @@
 import express from 'express';
 import {
-  hospitalRegister,
-  hospitalLogin,
   getHospitalProfile,
   updateHospitalProfile,
   getPublicHospitals,
@@ -15,6 +13,10 @@ import {
   getHospitalTransplants,
   updateTransplantStatus
 } from '../controllers/hospitalController.js';
+import {
+  hospitalRegister,
+  hospitalLogin
+} from '../controllers/authController.js';
 import { protectHospital, hospitalOnly, ensureApproved } from '../middleware/auth.js';
 
 const router = express.Router();

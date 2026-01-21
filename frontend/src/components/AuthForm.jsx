@@ -1,13 +1,13 @@
 import React, { useState } from 'react'
 import './AuthForm.css'
 
-const AuthForm = ({ 
-  selectedRole, 
-  authMode, 
-  onAuthModeChange, 
-  onSubmit, 
-  statusMessage, 
-  isLoading 
+const AuthForm = ({
+  selectedRole,
+  authMode,
+  onAuthModeChange,
+  onSubmit,
+  statusMessage,
+  isLoading
 }) => {
   const [formData, setFormData] = useState({
     email: '',
@@ -15,7 +15,9 @@ const AuthForm = ({
     name: '',
     hospitalName: '',
     licenseNumber: '',
-    secretKey: ''
+    secretKey: '',
+    bloodType: '',
+    isDonor: false
   })
 
   const handleInputChange = (e) => {
@@ -56,8 +58,8 @@ const AuthForm = ({
         >
           Register
         </button>
-        <div 
-          className="toggle-indicator" 
+        <div
+          className="toggle-indicator"
           aria-hidden="true"
           style={{
             left: isLogin ? '4px' : '50%'
@@ -67,9 +69,9 @@ const AuthForm = ({
 
       {/* Status Messages */}
       {statusMessage.text && (
-        <div 
+        <div
           className={`status-message visible ${statusMessage.type}`}
-          role="alert" 
+          role="alert"
           aria-live="polite"
         >
           {statusMessage.text}
@@ -125,6 +127,42 @@ const AuthForm = ({
                 onChange={handleInputChange}
               />
             </div>
+
+            {/* User Specific Fields */}
+            {selectedRole === 'user' && (
+              <div className="user-fields">
+                <div className="input-group">
+                  <label htmlFor="bloodType">Blood Type (Optional)</label>
+                  <select
+                    id="bloodType"
+                    name="bloodType"
+                    value={formData.bloodType}
+                    onChange={handleInputChange}
+                  >
+                    <option value="">Select Blood Type</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                  </select>
+                </div>
+                <div className="checkbox-group" style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      name="isDonor"
+                      checked={formData.isDonor}
+                      onChange={(e) => setFormData({ ...formData, isDonor: e.target.checked })}
+                    />
+                    <span>Register as an Organ Donor</span>
+                  </label>
+                </div>
+              </div>
+            )}
 
             {/* Hospital Specific Fields */}
             {selectedRole === 'hospital' && (
@@ -191,8 +229,8 @@ const AuthForm = ({
       <div className="card-footer">
         <p>
           {isLogin ? "Don't have an account? " : "Already have an account? "}
-          <button 
-            type="button" 
+          <button
+            type="button"
             className="text-button"
             onClick={() => onAuthModeChange(isLogin ? 'register' : 'login')}
           >

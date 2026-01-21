@@ -16,7 +16,7 @@ const AuthPage = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(!!localStorage.getItem('adminToken'))
 
-  const { login } = useAuth()
+  const { login, register } = useAuth()
   const navigate = useNavigate()
 
   // Handle role change with animation
@@ -46,20 +46,27 @@ const AuthPage = () => {
       return
     }
 
-    // Handle User Login (Mock)
+    // Handle User Auth
+    // Handle User Auth
     if (selectedRole === 'user') {
       try {
-        await login(formData.email, formData.password, 'user')
+        if (authMode === 'login') {
+          await login(formData.email, formData.password, 'user');
+        } else {
+          await register({ ...formData, role: 'user' });
+        }
+
         setStatusMessage({
-          text: 'Login successful! Redirecting...',
+          text: (authMode === 'login' ? 'Login' : 'Registration') + ' successful! Redirecting...',
           type: 'success'
-        })
-        setTimeout(() => navigate('/'), 1000)
+        });
+        setTimeout(() => navigate('/'), 1000);
       } catch (e) {
-        setStatusMessage({ text: 'Login failed', type: 'error' })
+        setStatusMessage({ text: e.message || 'Authentication failed', type: 'error' });
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false)
-      return
+      return;
     }
 
     // Call backend API
