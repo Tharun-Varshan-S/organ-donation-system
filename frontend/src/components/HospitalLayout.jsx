@@ -9,8 +9,10 @@ import {
     LogOut,
     Menu,
     X,
-    Stethoscope
+    Stethoscope,
+    Bell
 } from 'lucide-react';
+import apiService from '../services/api';
 import { motion } from 'framer-motion';
 import './HospitalLayout.css';
 
@@ -35,7 +37,40 @@ const HospitalLayout = () => {
         if (parsedHospital.status !== 'approved') {
             navigate('/hospital/pending-approval');
         }
+
+        fetchNotifications();
+        // Poll for notifications every minute
+        const interval = setInterval(fetchNotifications, 60000);
+        return () => clearInterval(interval);
     }, [navigate]);
+
+    const [notifications, setNotifications] = useState([]);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    const fetchNotifications = async () => {
+        try {
+            const data = await apiService.getHospitalNotifications();
+            if (data.success) {
+                setNotifications(data.data);
+                setUnreadCount(data.data.filter(n => !n.read).length);
+            }
+        } catch (error) {
+            console.error('Failed to fetch notifications', error);
+        }
+    };
+
+    const handleMarkAsRead = async (id) => {
+        try {
+            await apiService.markNotificationRead(id);
+            setNotifications(notifications.map(n =>
+                n._id === id ? { ...n, read: true } : n
+            ));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+        } catch (error) {
+            console.error('Failed to mark read', error);
+        }
+    };
 
     const handleLogout = () => {
         localStorage.removeItem('hospital');
@@ -126,6 +161,54 @@ const HospitalLayout = () => {
                     <h1 className="page-title">
                         {navItems.find(i => i.path === location.pathname)?.name || 'Dashboard'}
                     </h1>
+
+                    <div className="header-actions">
+                        <div className="notification-wrapper">
+                            <button
+                                className="notification-btn"
+                                onClick={() => setShowNotifications(!showNotifications)}
+                            >
+                                <Bell size={20} />
+                                {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
+                            </button>
+
+                            {showNotifications && (
+                                <div className="notification-dropdown">
+                                    <div className="notification-header">
+                                        <h3>Notifications</h3>
+                                        <button onClick={() => setShowNotifications(false)}><X size={16} /></button>
+                                    </div>
+                                    <div className="notification-body">
+                                        {notifications.length === 0 ? (
+                                            <p className="no-notifications">No notifications</p>
+                                        ) : (
+                                            notifications.map(n => (
+                                                <div key={n._id} className={`notification-card ${!n.read ? 'unread' : ''}`}>
+                                                    <div className="notif-content">
+                                                        <h4>{n.title}</h4>
+                                                        <p>{n.message}</p>
+                                                        <span className="notif-time">{new Date(n.createdAt).toLocaleTimeString()}</span>
+                                                    </div>
+                                                    {!n.read && (
+                                                        <button
+                                                            className="mark-read-btn"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleMarkAsRead(n._id);
+                                                            }}
+                                                            title="Mark as read"
+                                                        >
+                                                            <div className="dot" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </header>
 
                 <div className="content-area">

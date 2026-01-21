@@ -11,7 +11,9 @@ import {
   getHospitalRequests,
   createHospitalRequest,
   getHospitalTransplants,
-  updateTransplantStatus
+  updateTransplantStatus,
+  getNotifications,
+  markNotificationRead
 } from '../controllers/hospitalController.js';
 import {
   hospitalRegister,
@@ -23,8 +25,6 @@ const router = express.Router();
 
 // Public Routes
 router.get('/', getPublicHospitals);
-router.get('/:id', getPublicHospitalById);
-
 // @route   POST /api/hospital/register
 router.post('/register', hospitalRegister);
 
@@ -43,6 +43,8 @@ router.put('/profile', protectHospital, hospitalOnly, ensureApproved, updateHosp
 
 // @route   GET /api/hospital/dashboard
 router.get('/dashboard', protectHospital, hospitalOnly, ensureApproved, getDashboardStats);
+router.get('/notifications', protectHospital, hospitalOnly, ensureApproved, getNotifications);
+router.put('/notifications/:id/read', protectHospital, hospitalOnly, ensureApproved, markNotificationRead);
 
 // @route   GET / POST / PUT /api/hospital/donors
 router.route('/donors')
@@ -59,5 +61,9 @@ router.route('/requests')
 // @route   GET / PUT /api/hospital/transplants
 router.get('/transplants', protectHospital, hospitalOnly, ensureApproved, getHospitalTransplants);
 router.put('/transplants/:id', protectHospital, hospitalOnly, ensureApproved, updateTransplantStatus);
+
+// @route   GET /api/hospital/:id
+// @desc    Get public hospital details by ID (Must be last route to match)
+router.get('/:id', getPublicHospitalById);
 
 export default router;
