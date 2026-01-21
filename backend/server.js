@@ -56,8 +56,11 @@ app.get('/api/health', (req, res) => {
 // API Routes
 app.use('/api/admin', authRoutes);
 app.use('/api/admin', adminRoutes);
+// Hospital Dashboard & Management API (Singular)
+app.use('/api/hospital', legacyHospitalRoutes);
+
+// Public Hospital Directory (Plural)
 app.use('/api/hospitals', hospitalRoutes);
-if (legacyHospitalRoutes) app.use('/api/legacy-hospitals', legacyHospitalRoutes);
 if (generalRoutes) app.use('/', generalRoutes);
 
 // Error handling middleware

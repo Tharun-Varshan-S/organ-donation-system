@@ -9,9 +9,18 @@ import AuthPage from './components/AuthPage';
 import HospitalDashboard from './landing/pages/HospitalDashboard';
 import HospitalOverview from './landing/pages/HospitalOverview';
 import HospitalRequestDetails from './landing/pages/HospitalRequestDetails';
-import HospitalList from './pages/HospitalList';
+import HospitalDetailedList from './pages/HospitalList'; // Alias logic if needed
 import HospitalDetailPage from './pages/HospitalDetailPage';
 import './App.css';
+
+// Internal Hospital Portal Components
+import HospitalLayout from './components/HospitalLayout';
+import PendingApproval from './pages/hospital/PendingApproval';
+import HospitalInternalDashboard from './pages/hospital/Dashboard';
+import HospitalDonors from './pages/hospital/Donors';
+import HospitalRequests from './pages/hospital/Requests';
+import HospitalTransplants from './pages/hospital/Transplants';
+import HospitalProfile from './pages/hospital/Profile';
 
 function App() {
   return (
@@ -28,7 +37,7 @@ function App() {
             {/* Authenticated Portal Routes */}
             <Route path="/login" element={<AuthPage />} />
 
-            {/* Hospital Dashboard Routes */}
+            {/* Hospital Dashboard Routes (Public/Admin View) */}
             <Route path="/hospitals" element={<HospitalDashboard />} />
             <Route path="/hospitals/:hospitalId" element={<HospitalOverview />} />
 
@@ -37,7 +46,19 @@ function App() {
             <Route path="/admin/hospital-requests/:hospitalId" element={<HospitalRequestDetails />} />
 
             {/* Legacy Hospital List Route (can be deprecated) */}
-            <Route path="/hospital-list" element={<HospitalList />} />
+            <Route path="/hospital-list" element={<HospitalDetailedList />} />
+
+            {/* INTERNAL HOSPITAL PORTAL */}
+            <Route path="/hospital/pending-approval" element={<PendingApproval />} />
+
+            <Route path="/hospital" element={<HospitalLayout />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<HospitalInternalDashboard />} />
+              <Route path="donors" element={<HospitalDonors />} />
+              <Route path="requests" element={<HospitalRequests />} />
+              <Route path="transplants" element={<HospitalTransplants />} />
+              <Route path="profile" element={<HospitalProfile />} />
+            </Route>
 
             {/* Catch-all - redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />

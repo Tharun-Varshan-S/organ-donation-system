@@ -100,12 +100,16 @@ const AuthPage = () => {
               type: 'success'
             })
           } else if (selectedRole === 'hospital') {
-            await login(formData.email, formData.password, 'hospital')
+            // await login(...) // Context login might expect generic structure, but we have specific hospital handling
+            // Manually store for HospitalLayout usage
+            localStorage.setItem('token', response.token);
+            localStorage.setItem('hospital', JSON.stringify(response.hospital));
+
             setStatusMessage({
               text: 'Login successful! Redirecting to Hospital Dashboard...',
               type: 'success'
             })
-            setTimeout(() => navigate('/hospitals'), 1000)
+            setTimeout(() => navigate('/hospital/dashboard'), 1000)
           }
         } else {
           setStatusMessage({

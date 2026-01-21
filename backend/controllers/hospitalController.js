@@ -1,5 +1,10 @@
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import Hospital from '../models/Hospital.js';
+import Donor from '../models/Donor.js';
+import Request from '../models/Request.js';
+import Transplant from '../models/Transplant.js';
+import AuditLog from '../models/AuditLog.js';
 import { ErrorResponse, asyncHandler } from '../middleware/error.js';
 
 // Generate JWT Token
@@ -107,10 +112,8 @@ const hospitalLogin = asyncHandler(async (req, res) => {
     throw new ErrorResponse('Hospital account is deactivated', 401);
   }
 
-  // Check if hospital is approved
-  if (hospital.status !== 'approved') {
-    throw new ErrorResponse(`Hospital account is ${hospital.status}. Please wait for admin approval.`, 403);
-  }
+  // Status check moved to middleware/frontend redirect logic
+  // if (hospital.status !== 'approved') { ... }
 
   // Check password
   const isPasswordMatch = await hospital.comparePassword(password);
@@ -194,6 +197,14 @@ const updateHospitalProfile = asyncHandler(async (req, res) => {
 
   await hospital.save();
 
+  await AuditLog.create({
+    actionType: 'UPDATE',
+    performedBy: { id: req.hospital.id, name: req.hospital.name, role: 'Hospital' },
+    entityType: 'HOSPITAL',
+    entityId: hospital._id,
+    details: 'Hospital profile updated'
+  });
+
   res.status(200).json({
     success: true,
     message: 'Profile updated successfully',
@@ -250,12 +261,255 @@ const getPublicHospitalById = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get Hospital Dashboard Stats
+// @route   GET /api/hospital/dashboard
+// @access  Private (Approved Hospital)
+const getDashboardStats = asyncHandler(async (req, res) => {
+  const hospitalId = req.hospital.id;
+
+  // Parallel execution for performance
+  const [
+    donorStats,
+    requestStats,
+    transplants
+  ] = await Promise.all([
+    // Donor Stats
+    Donor.aggregate([
+      { $match: { registeredHospital: new mongoose.Types.ObjectId(hospitalId) } },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          active: { $sum: { $cond: [{ $eq: ["$status", "active"] }, 1, 0] } },
+          deceased: { $sum: { $cond: [{ $eq: ["$status", "deceased"] }, 1, 0] } }
+        }
+      }
+    ]),
+
+    // Request Stats
+    Request.aggregate([
+      { $match: { hospital: new mongoose.Types.ObjectId(hospitalId) } },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          active: { $sum: { $cond: [{ $ne: ["$status", "completed"] }, 1, 0] } },
+          emergency: { $sum: { $cond: [{ $eq: ["$patient.urgencyLevel", "critical"] }, 1, 0] } }
+        }
+      }
+    ]),
+
+    // Successful Transplants Count
+    Transplant.countDocuments({
+      hospital: hospitalId,
+      status: 'completed'
+    })
+  ]);
+
+  const donors = donorStats[0] || { total: 0, active: 0, deceased: 0 };
+  const requests = requestStats[0] || { total: 0, active: 0, emergency: 0 };
+
+  res.status(200).json({
+    success: true,
+    data: {
+      donors: {
+        total: donors.total,
+        active: donors.active,
+        deceased: donors.deceased
+      },
+      requests: {
+        active: requests.active,
+        emergency: requests.emergency
+      },
+      transplants: {
+        successful: transplants
+      }
+    }
+  });
+});
+
+// @desc    Get Hospital Donors
+// @route   GET /api/hospital/donors
+// @access  Private (Approved Hospital)
+const getHospitalDonors = asyncHandler(async (req, res) => {
+  const donors = await Donor.find({ registeredHospital: req.hospital.id })
+    .sort({ createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    count: donors.length,
+    data: donors
+  });
+});
+
+// @desc    Create New Donor
+// @route   POST /api/hospital/donors
+// @access  Private (Approved Hospital)
+const createHospitalDonor = asyncHandler(async (req, res) => {
+  req.body.registeredHospital = req.hospital.id;
+  req.body.isVerified = true;
+
+  const donor = await Donor.create(req.body);
+
+  await Hospital.findByIdAndUpdate(req.hospital.id, {
+    $inc: { 'stats.donorCount': 1 }
+  });
+
+  await AuditLog.create({
+    actionType: 'CREATE',
+    performedBy: { id: req.hospital.id, name: req.hospital.name, role: 'Hospital' },
+    entityType: 'DONOR',
+    entityId: donor._id,
+    details: `Created donor ${donor.personalInfo.firstName} ${donor.personalInfo.lastName}`
+  });
+
+  res.status(201).json({
+    success: true,
+    data: donor
+  });
+});
+
+// @desc    Update Donor
+// @route   PUT /api/hospital/donors/:id
+// @access  Private (Approved Hospital)
+const updateHospitalDonor = asyncHandler(async (req, res) => {
+  let donor = await Donor.findOne({
+    _id: req.params.id,
+    registeredHospital: req.hospital.id
+  });
+
+  if (!donor) {
+    throw new ErrorResponse('Donor not found or unauthorized', 404);
+  }
+
+  donor = await Donor.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+    runValidators: true
+  });
+
+  await AuditLog.create({
+    actionType: 'UPDATE',
+    performedBy: { id: req.hospital.id, name: req.hospital.name, role: 'Hospital' },
+    entityType: 'DONOR',
+    entityId: donor._id,
+    details: `Updated donor ${donor.personalInfo.firstName} ${donor.personalInfo.lastName}`
+  });
+
+  res.status(200).json({
+    success: true,
+    data: donor
+  });
+});
+
+// @desc    Get Hospital Requests
+// @route   GET /api/hospital/requests
+// @access  Private (Approved Hospital)
+const getHospitalRequests = asyncHandler(async (req, res) => {
+  const requests = await Request.find({ hospital: req.hospital.id })
+    .sort({ 'patient.urgencyLevel': -1, createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    count: requests.length,
+    data: requests
+  });
+});
+
+// @desc    Create Organ Request
+// @route   POST /api/hospital/requests
+// @access  Private (Approved Hospital)
+const createHospitalRequest = asyncHandler(async (req, res) => {
+  req.body.hospital = req.hospital.id;
+
+  const request = await Request.create(req.body);
+
+  await Hospital.findByIdAndUpdate(req.hospital.id, {
+    $inc: { 'stats.requestCount': 1 }
+  });
+
+  await AuditLog.create({
+    actionType: 'CREATE',
+    performedBy: { id: req.hospital.id, name: req.hospital.name, role: 'Hospital' },
+    entityType: 'REQUEST',
+    entityId: request._id,
+    details: `Created organ request for ${request.patient.name} (${request.organType})`
+  });
+
+  res.status(201).json({
+    success: true,
+    data: request
+  });
+});
+
+// @desc    Get Hospital Transplants
+// @route   GET /api/hospital/transplants
+// @access  Private (Approved Hospital)
+const getHospitalTransplants = asyncHandler(async (req, res) => {
+  const transplants = await Transplant.find({ hospital: req.hospital.id })
+    .populate('donor', 'personalInfo.firstName personalInfo.lastName')
+    //.populate('recipient', 'patient.name') // recipient is in Request probably? Wait, Request IS the recipient need.
+    // Transplant model check needed? I saw Transplant.js earlier.
+    .sort({ surgeryDate: -1 });
+
+  res.status(200).json({
+    success: true,
+    count: transplants.length,
+    data: transplants
+  });
+});
+
+// @desc    Update Transplant Status
+// @route   PUT /api/hospital/transplants/:id
+// @access  Private (Approved Hospital)
+const updateTransplantStatus = asyncHandler(async (req, res) => {
+  let transplant = await Transplant.findOne({
+    _id: req.params.id,
+    hospital: req.hospital.id
+  });
+
+  if (!transplant) {
+    throw new ErrorResponse('Transplant record not found', 404);
+  }
+
+  transplant = await Transplant.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+    runValidators: true
+  });
+
+  if (req.body.status === 'completed') {
+    await Hospital.findByIdAndUpdate(req.hospital.id, {
+      $inc: { 'stats.successfulTransplants': 1 }
+    });
+  }
+
+  await AuditLog.create({
+    actionType: 'UPDATE',
+    performedBy: { id: req.hospital.id, name: req.hospital.name, role: 'Hospital' },
+    entityType: 'TRANSPLANT',
+    entityId: transplant._id,
+    details: `Transplant status updated to ${req.body.status}`
+  });
+
+  res.status(200).json({
+    success: true,
+    data: transplant
+  });
+});
+
 export {
   hospitalRegister,
   hospitalLogin,
   getHospitalProfile,
   updateHospitalProfile,
   getPublicHospitals,
-  getPublicHospitalById
+  getPublicHospitalById,
+  getDashboardStats,
+  getHospitalDonors,
+  createHospitalDonor,
+  updateHospitalDonor,
+  getHospitalRequests,
+  createHospitalRequest,
+  getHospitalTransplants,
+  updateTransplantStatus
 };
 

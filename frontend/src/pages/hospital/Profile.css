@@ -1,0 +1,66 @@
+.profile-page {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.profile-form {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.form-row {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-row label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #475569;
+}
+
+.form-row input,
+.form-row select {
+    padding: 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+}
+
+.disabled-input {
+    background: #f1f5f9;
+    color: #94a3b8;
+}
+
+.emergency-input {
+    border-color: #fca5a5;
+    background: #fef2f2;
+}
+
+.save-btn {
+    background: #0ea5e9;
+    color: white;
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 1rem;
+}
+
+.map-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.map-container {
+    margin-top: 1rem;
+    border-radius: 8px;
+    overflow: hidden;
+}
