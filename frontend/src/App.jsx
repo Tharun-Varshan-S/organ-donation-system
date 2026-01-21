@@ -9,6 +9,7 @@ import AuthPage from './components/AuthPage';
 import HospitalDashboard from './landing/pages/HospitalDashboard';
 import HospitalOverview from './landing/pages/HospitalOverview';
 import HospitalRequestDetails from './landing/pages/HospitalRequestDetails';
+<<<<<<< HEAD
 import HospitalDetailedList from './pages/HospitalList'; // Alias logic if needed
 import HospitalDetailPage from './pages/HospitalDetailPage';
 import './App.css';
@@ -22,6 +23,12 @@ import HospitalRequests from './pages/hospital/Requests';
 import HospitalTransplants from './pages/hospital/Transplants';
 import HospitalProfile from './pages/hospital/Profile';
 
+=======
+import HospitalList from './pages/HospitalList';
+import HospitalDetailPage from './pages/HospitalDetailPage';
+import './App.css';
+
+>>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
 function App() {
   return (
     <AuthProvider>
@@ -37,7 +44,11 @@ function App() {
             {/* Authenticated Portal Routes */}
             <Route path="/login" element={<AuthPage />} />
 
+<<<<<<< HEAD
             {/* Hospital Dashboard Routes (Public/Admin View) */}
+=======
+            {/* Hospital Dashboard Routes */}
+>>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
             <Route path="/hospitals" element={<HospitalDashboard />} />
             <Route path="/hospitals/:hospitalId" element={<HospitalOverview />} />
 
@@ -46,6 +57,7 @@ function App() {
             <Route path="/admin/hospital-requests/:hospitalId" element={<HospitalRequestDetails />} />
 
             {/* Legacy Hospital List Route (can be deprecated) */}
+<<<<<<< HEAD
             <Route path="/hospital-list" element={<HospitalDetailedList />} />
 
             {/* INTERNAL HOSPITAL PORTAL */}
@@ -59,6 +71,9 @@ function App() {
               <Route path="transplants" element={<HospitalTransplants />} />
               <Route path="profile" element={<HospitalProfile />} />
             </Route>
+=======
+            <Route path="/hospital-list" element={<HospitalList />} />
+>>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
 
             {/* Catch-all - redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />

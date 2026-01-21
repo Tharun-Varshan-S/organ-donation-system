@@ -1,7 +1,16 @@
+<<<<<<< HEAD
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+=======
+import dotenv from 'dotenv';
+dotenv.config();
+
+import express from 'express';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+>>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
 import connectDB from './config/database.js';
 import { errorHandler, notFound } from './middleware/error.js';
 
@@ -11,12 +20,18 @@ import adminRoutes from './routes/admin.js';
 import hospitalRoutes from './routes/hospitals.js'; // Note: check filename
 import legacyHospitalRoutes from './routes/hospital.js'; // From remote
 import generalRoutes from './routes/route.js'; // From remote
+<<<<<<< HEAD
 import userRoutes from './routes/user.js';
 
 dotenv.config();
 
 // Connect to database
 connectDB();
+=======
+
+// Connect to database
+await connectDB();
+>>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
 
 const app = express();
 
@@ -57,12 +72,17 @@ app.get('/api/health', (req, res) => {
 // API Routes
 app.use('/api/admin', authRoutes);
 app.use('/api/admin', adminRoutes);
+<<<<<<< HEAD
 // Hospital Dashboard & Management API (Singular)
 app.use('/api/hospital', legacyHospitalRoutes);
 
 // Public Hospital Directory (Plural)
 app.use('/api/hospitals', hospitalRoutes);
 app.use('/api/users', userRoutes);
+=======
+app.use('/api/hospitals', hospitalRoutes);
+if (legacyHospitalRoutes) app.use('/api/legacy-hospitals', legacyHospitalRoutes);
+>>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
 if (generalRoutes) app.use('/', generalRoutes);
 
 // Error handling middleware

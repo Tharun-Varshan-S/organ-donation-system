@@ -63,7 +63,11 @@ class ApiService {
 
   // Hospital Authentication
   async hospitalLogin(email, password) {
+<<<<<<< HEAD
     const response = await fetch(`${API_BASE_URL}/hospital/login`, {
+=======
+    const response = await fetch(`${API_BASE_URL}/hospitals/login`, {
+>>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
@@ -72,14 +76,19 @@ class ApiService {
     const data = await this.handleResponse(response)
 
     if (data.success && data.token) {
+<<<<<<< HEAD
       // Do not set adminToken here. Hospital token is handled by AuthPage.
       // this.setToken(data.token) 
+=======
+      this.setToken(data.token)
+>>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
     }
 
     return data
   }
 
   async hospitalRegister(formData) {
+<<<<<<< HEAD
     const response = await fetch(`${API_BASE_URL}/hospital/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -106,6 +115,9 @@ class ApiService {
 
   async userRegister(formData) {
     const response = await fetch(`${API_BASE_URL}/users/register`, {
+=======
+    const response = await fetch(`${API_BASE_URL}/hospitals/register`, {
+>>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData)
