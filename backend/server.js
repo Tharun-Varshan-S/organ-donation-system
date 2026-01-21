@@ -11,6 +11,7 @@ import adminRoutes from './routes/admin.js';
 import hospitalRoutes from './routes/hospitals.js'; // Note: check filename
 import legacyHospitalRoutes from './routes/hospital.js'; // From remote
 import generalRoutes from './routes/route.js'; // From remote
+import userRoutes from './routes/user.js';
 
 dotenv.config();
 
@@ -61,6 +62,7 @@ app.use('/api/hospital', legacyHospitalRoutes);
 
 // Public Hospital Directory (Plural)
 app.use('/api/hospitals', hospitalRoutes);
+app.use('/api/users', userRoutes);
 if (generalRoutes) app.use('/', generalRoutes);
 
 // Error handling middleware

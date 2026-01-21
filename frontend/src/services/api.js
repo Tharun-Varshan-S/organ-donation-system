@@ -89,6 +89,31 @@ class ApiService {
     return this.handleResponse(response)
   }
 
+  // User Authentication
+  async userLogin(email, password) {
+    const response = await fetch(`${API_BASE_URL}/users/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    })
+
+    const data = await this.handleResponse(response)
+    // if (data.success && data.token) {
+    //   this.setToken(data.token) // Optional: if we want to store it in the class
+    // }
+    return data
+  }
+
+  async userRegister(formData) {
+    const response = await fetch(`${API_BASE_URL}/users/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    })
+
+    return this.handleResponse(response)
+  }
+
   // Dashboard Stats
   async getDashboardStats() {
     const response = await fetch(`${API_BASE_URL}/admin/dashboard/stats`, {
