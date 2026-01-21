@@ -5,7 +5,8 @@ import {
     CheckCircle,
     AlertTriangle,
     ArrowUpRight,
-    Heart
+    Heart,
+    Clock
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, BarChart, Bar } from 'recharts';
@@ -201,6 +202,29 @@ const HospitalDashboard = () => {
                                 <p>Operations are running smoothly.</p>
                             </div>
                         </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Recent Activity Feed */}
+            <div className="notifications-panel">
+                <h3>Recent Activity</h3>
+                <div className="notification-list">
+                    {stats.recentActivity && stats.recentActivity.length > 0 ? (
+                        stats.recentActivity.map((log) => (
+                            <div key={log._id} className="notification-item info" style={{ backgroundColor: '#f8fafc', borderColor: '#e2e8f0', color: '#334155' }}>
+                                <Clock size={18} className="text-gray-400" />
+                                <div>
+                                    <h4 style={{ color: '#0f172a' }}>{log.actionType} - {log.entityType}</h4>
+                                    <p>{log.details}</p>
+                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                        {new Date(log.createdAt).toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="no-notifications">No recent activity.</p>
                     )}
                 </div>
             </div>

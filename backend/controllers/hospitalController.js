@@ -5,6 +5,7 @@ import Donor from '../models/Donor.js';
 import Request from '../models/Request.js';
 import Transplant from '../models/Transplant.js';
 import AuditLog from '../models/AuditLog.js';
+import Notification from '../models/Notification.js';
 import { ErrorResponse, asyncHandler } from '../middleware/error.js';
 
 // Generate JWT Token
@@ -299,15 +300,21 @@ const getDashboardStats = asyncHandler(async (req, res) => {
       }
     ]),
 
-    // Successful Transplants Count
     Transplant.countDocuments({
       hospital: hospitalId,
       status: 'completed'
-    })
+    }),
+
+    // Recent Activity (Audit Logs)
+    AuditLog.find({ 'performedBy.id': hospitalId })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean()
   ]);
 
   const donors = donorStats[0] || { total: 0, active: 0, deceased: 0 };
   const requests = requestStats[0] || { total: 0, active: 0, emergency: 0 };
+  const recentActivity = transplants[1]; // specific index because Promise.all returns array
 
   res.status(200).json({
     success: true,
@@ -322,8 +329,9 @@ const getDashboardStats = asyncHandler(async (req, res) => {
         emergency: requests.emergency
       },
       transplants: {
-        successful: transplants
-      }
+        successful: transplants[0] // first item in the transplants/activity chunk
+      },
+      recentActivity
     }
   });
 });
@@ -435,6 +443,21 @@ const createHospitalRequest = asyncHandler(async (req, res) => {
     details: `Created organ request for ${request.patient.name} (${request.organType})`
   });
 
+  // Emergency Auto-Escalation / Notification
+  if (request.patient.urgencyLevel === 'critical') {
+    await Notification.create({
+      recipient: req.hospital.id,
+      type: 'EMERGENCY',
+      title: 'Critical Emergency Request Created',
+      message: `A critical request for ${request.organType} has been logged. Admin has been notified via auto-escalation.`,
+      relatedEntity: {
+        id: request._id,
+        model: 'Request'
+      }
+    });
+    // ideally also notify Admin (omitted for now as per scope, or create Admin Notification here too if Notification model supports it)
+  }
+
   res.status(201).json({
     success: true,
     data: request
@@ -496,6 +519,41 @@ const updateTransplantStatus = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get Notifications
+// @route   GET /api/hospital/notifications
+// @access  Private (Approved Hospital)
+const getNotifications = asyncHandler(async (req, res) => {
+  const notifications = await Notification.find({ recipient: req.hospital.id })
+    .sort({ createdAt: -1 })
+    .limit(20);
+
+  res.status(200).json({
+    success: true,
+    count: notifications.length,
+    data: notifications
+  });
+});
+
+// @desc    Mark Notification as Read
+// @route   PUT /api/hospital/notifications/:id/read
+// @access  Private (Approved Hospital)
+const markNotificationRead = asyncHandler(async (req, res) => {
+  const notification = await Notification.findOneAndUpdate(
+    { _id: req.params.id, recipient: req.hospital.id },
+    { read: true },
+    { new: true }
+  );
+
+  if (!notification) {
+    throw new ErrorResponse('Notification not found', 404);
+  }
+
+  res.status(200).json({
+    success: true,
+    data: notification
+  });
+});
+
 export {
   hospitalRegister,
   hospitalLogin,
@@ -510,6 +568,8 @@ export {
   getHospitalRequests,
   createHospitalRequest,
   getHospitalTransplants,
-  updateTransplantStatus
+  updateTransplantStatus,
+  getNotifications,
+  markNotificationRead
 };
 

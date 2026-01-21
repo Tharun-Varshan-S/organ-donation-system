@@ -167,6 +167,22 @@ class ApiService {
     return this.handleResponse(response)
   }
 
+  // Notifications
+  async getHospitalNotifications() {
+    const response = await fetch(`${API_BASE_URL}/hospital/notifications`, {
+      headers: this.getAuthHeaders()
+    })
+    return this.handleResponse(response)
+  }
+
+  async markNotificationRead(id) {
+    const response = await fetch(`${API_BASE_URL}/hospital/notifications/${id}/read`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders()
+    })
+    return this.handleResponse(response)
+  }
+
   async rejectHospital(hospitalId, reason) {
     const response = await fetch(`${API_BASE_URL}/admin/hospitals/${hospitalId}/reject`, {
       method: 'PUT',
