@@ -1,7 +1,42 @@
 import React from 'react';
-import { Clock } from 'lucide-react';
+import { Clock, XCircle, AlertTriangle } from 'lucide-react';
 
 const PendingApproval = () => {
+    const hospital = JSON.parse(localStorage.getItem('hospital') || '{}');
+    const status = hospital.status || 'pending';
+
+    const renderContent = () => {
+        switch (status) {
+            case 'rejected':
+                return {
+                    title: 'Registration Rejected',
+                    message: 'Your application has been rejected by the administrator. Please contact support for more details.',
+                    color: '#ef4444',
+                    bg: '#fef2f2',
+                    Icon: XCircle
+                };
+            case 'suspended':
+                return {
+                    title: 'Account Suspended',
+                    message: 'Your hospital account has been suspended due to compliance issues.',
+                    color: '#ef4444',
+                    bg: '#fef2f2',
+                    Icon: AlertTriangle
+                };
+            default:
+                return {
+                    title: 'Registration Pending',
+                    message: 'Your hospital registration has been submitted and is currently under review by the Administration. You will be notified upon approval.',
+                    color: '#ea580c',
+                    bg: '#fff7ed',
+                    Icon: Clock
+                };
+        }
+    };
+
+    const content = renderContent();
+    const Icon = content.Icon;
+
     return (
         <div style={{
             height: '100vh',
@@ -20,21 +55,20 @@ const PendingApproval = () => {
                 boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)'
             }}>
                 <div style={{
-                    background: '#fff7ed',
+                    background: content.bg,
                     padding: '1rem',
                     borderRadius: '50%',
                     display: 'inline-flex',
                     marginBottom: '1.5rem'
                 }}>
-                    <Clock size={48} color="#ea580c" />
+                    <Icon size={48} color={content.color} />
                 </div>
-                <h1 style={{ fontSize: '2rem', marginBottom: '1rem', color: '#1e293b' }}>Registration Pending</h1>
+                <h1 style={{ fontSize: '2rem', marginBottom: '1rem', color: '#1e293b' }}>{content.title}</h1>
                 <p style={{ color: '#64748b', maxWidth: '400px', margin: '0 auto 2rem' }}>
-                    Your hospital registration has been submitted and is currently under review by the Administration.
-                    You will receive an email notification once your account is approved.
+                    {content.message}
                 </p>
                 <div style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
-                    Application ID: {localStorage.getItem('hospital') ? JSON.parse(localStorage.getItem('hospital')).id : '---'}
+                    Application ID: {hospital.id || 'N/A'}
                 </div>
                 <button
                     onClick={() => { localStorage.clear(); window.location.href = '/login'; }}

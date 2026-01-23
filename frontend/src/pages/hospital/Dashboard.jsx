@@ -5,7 +5,8 @@ import {
     CheckCircle,
     AlertTriangle,
     ArrowUpRight,
-    Heart
+    Heart,
+    Clock
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, BarChart, Bar } from 'recharts';
@@ -172,37 +173,73 @@ const HospitalDashboard = () => {
                 </motion.div>
             </div>
 
-            <div className="notifications-panel">
-                <h3>Recent Alerts</h3>
-                <div className="notification-list">
-                    {stats.requests.emergency > 0 && (
-                        <div className="notification-item critical">
-                            <AlertTriangle size={18} />
-                            <div>
-                                <h4>Critical Request Pending</h4>
-                                <p>You have {stats.requests.emergency} request(s) marked as critical.</p>
+            <div className="charts-section">
+                <motion.div
+                    className="notifications-panel"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                >
+                    <h3>Recent Alerts</h3>
+                    <div className="notification-list">
+                        {stats.requests.emergency > 0 && (
+                            <div className="notification-item critical">
+                                <AlertTriangle size={18} />
+                                <div>
+                                    <h4>Critical Request Pending</h4>
+                                    <p>You have {stats.requests.emergency} request(s) marked as critical.</p>
+                                </div>
                             </div>
-                        </div>
-                    )}
-                    {stats.donors.total === 0 && (
-                        <div className="notification-item info">
-                            <Heart size={18} />
-                            <div>
-                                <h4>Start Registering Donors</h4>
-                                <p>Your donor database is empty. Register donors to begin.</p>
+                        )}
+                        {stats.donors.total === 0 && (
+                            <div className="notification-item info">
+                                <Heart size={18} />
+                                <div>
+                                    <h4>Start Registering Donors</h4>
+                                    <p>Your donor database is empty. Register donors to begin.</p>
+                                </div>
                             </div>
-                        </div>
-                    )}
-                    {!stats.requests.emergency && stats.donors.total > 0 && (
-                        <div className="notification-item success">
-                            <CheckCircle size={18} />
-                            <div>
-                                <h4>All Systems Nominal</h4>
-                                <p>Operations are running smoothly.</p>
+                        )}
+                        {!stats.requests.emergency && stats.donors.total > 0 && (
+                            <div className="notification-item success">
+                                <CheckCircle size={18} />
+                                <div>
+                                    <h4>All Systems Nominal</h4>
+                                    <p>Operations are running smoothly.</p>
+                                </div>
                             </div>
+                        )}
+                    </div>
+                </motion.div>
+
+                <motion.div
+                    className="recent-activity-panel"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                >
+                    <h3>Recent Activity</h3>
+                    {stats?.recentActivity && stats.recentActivity.length > 0 ? (
+                        <div className="activity-list">
+                            {stats.recentActivity.map((activity, index) => (
+                                <div key={index} className="activity-item">
+                                    <div className="activity-icon">
+                                        <Activity size={16} />
+                                    </div>
+                                    <div className="activity-content">
+                                        <h4>{activity.details}</h4>
+                                        <p>{activity.actionType} • {activity.entityType}</p>
+                                    </div>
+                                    <span className="activity-time">
+                                        {new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </div>
+                            ))}
                         </div>
+                    ) : (
+                        <div className="no-activity">No recent activity</div>
                     )}
-                </div>
+                </motion.div>
             </div>
         </div>
     );
