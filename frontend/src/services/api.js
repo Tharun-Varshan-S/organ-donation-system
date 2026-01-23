@@ -17,9 +17,11 @@ class ApiService {
 
   // Get auth headers
   getAuthHeaders() {
+    // Check for userToken first (for donor/user endpoints), then adminToken
+    const token = localStorage.getItem('userToken') || localStorage.getItem('token') || this.token;
     return {
       'Content-Type': 'application/json',
-      ...(this.token && { 'Authorization': `Bearer ${this.token}` })
+      ...(token && { 'Authorization': `Bearer ${token}` })
     }
   }
 
@@ -63,11 +65,7 @@ class ApiService {
 
   // Hospital Authentication
   async hospitalLogin(email, password) {
-<<<<<<< HEAD
     const response = await fetch(`${API_BASE_URL}/hospital/login`, {
-=======
-    const response = await fetch(`${API_BASE_URL}/hospitals/login`, {
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
@@ -76,19 +74,14 @@ class ApiService {
     const data = await this.handleResponse(response)
 
     if (data.success && data.token) {
-<<<<<<< HEAD
       // Do not set adminToken here. Hospital token is handled by AuthPage.
       // this.setToken(data.token) 
-=======
-      this.setToken(data.token)
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
     }
 
     return data
   }
 
   async hospitalRegister(formData) {
-<<<<<<< HEAD
     const response = await fetch(`${API_BASE_URL}/hospital/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -115,14 +108,35 @@ class ApiService {
 
   async userRegister(formData) {
     const response = await fetch(`${API_BASE_URL}/users/register`, {
-=======
-    const response = await fetch(`${API_BASE_URL}/hospitals/register`, {
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData)
     })
 
+    return this.handleResponse(response)
+  }
+
+  // User Profile & History
+  async getUserProfile() {
+    const response = await fetch(`${API_BASE_URL}/users/profile`, {
+      headers: this.getAuthHeaders()
+    })
+    return this.handleResponse(response)
+  }
+
+  async updateUserProfile(profileData) {
+    const response = await fetch(`${API_BASE_URL}/users/profile`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(profileData)
+    })
+    return this.handleResponse(response)
+  }
+
+  async getUserHistory() {
+    const response = await fetch(`${API_BASE_URL}/users/history`, {
+      headers: this.getAuthHeaders()
+    })
     return this.handleResponse(response)
   }
 

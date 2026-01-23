@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5000/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 class ApiService {
     constructor() {
@@ -37,9 +37,13 @@ class ApiService {
 
     // Get auth headers
     getAuthHeaders(type = 'admin') {
-        let token = this.adminToken;
-        if (type === 'hospital') token = this.hospitalToken;
-        if (type === 'donor') token = this.donorToken;
+        const adminToken = localStorage.getItem('adminToken');
+        const hospitalToken = localStorage.getItem('hospitalToken');
+        const donorToken = localStorage.getItem('donorToken') || localStorage.getItem('userToken') || localStorage.getItem('token');
+
+        let token = adminToken;
+        if (type === 'hospital') token = hospitalToken;
+        if (type === 'donor' || type === 'user') token = donorToken;
 
         return {
             'Content-Type': 'application/json',
@@ -76,22 +80,6 @@ class ApiService {
     }
 
     // Hospital Authentication
-    async hospitalLogin(email, password) {
-        const response = await fetch(`${API_BASE_URL}/hospital/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        })
-
-        const data = await this.handleResponse(response)
-
-        if (data.success && data.token) {
-            this.setHospitalToken(data.token)
-        }
-
-        return data
-    }
-
     async hospitalRegister(formData) {
         const response = await fetch(`${API_BASE_URL}/hospital/register`, {
             method: 'POST',
@@ -100,6 +88,39 @@ class ApiService {
         })
 
         return this.handleResponse(response)
+    }
+
+    // User/Donor Authentication
+    async userLogin(email, password) {
+        const response = await fetch(`${API_BASE_URL}/users/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        })
+
+        const data = await this.handleResponse(response)
+
+        if (data.success && data.token) {
+            localStorage.setItem('userToken', data.token)
+        }
+
+        return data
+    }
+
+    async userRegister(formData) {
+        const response = await fetch(`${API_BASE_URL}/users/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        })
+
+        const data = await this.handleResponse(response)
+
+        if (data.success && data.token) {
+            localStorage.setItem('userToken', data.token)
+        }
+
+        return data
     }
 
     // Dashboard Stats
@@ -150,6 +171,30 @@ class ApiService {
             headers: this.getAuthHeaders('admin')
         })
 
+        return this.handleResponse(response)
+    }
+
+    // User/Donor Actions
+    async getUserProfile() {
+        const response = await fetch(`${API_BASE_URL}/users/profile`, {
+            headers: this.getAuthHeaders('user')
+        })
+        return this.handleResponse(response)
+    }
+
+    async updateUserProfile(data) {
+        const response = await fetch(`${API_BASE_URL}/users/profile`, {
+            method: 'PUT',
+            headers: this.getAuthHeaders('user'),
+            body: JSON.stringify(data)
+        })
+        return this.handleResponse(response)
+    }
+
+    async getUserHistory() {
+        const response = await fetch(`${API_BASE_URL}/users/history`, {
+            headers: this.getAuthHeaders('user') // OR 'donor' if consistent
+        })
         return this.handleResponse(response)
     }
 

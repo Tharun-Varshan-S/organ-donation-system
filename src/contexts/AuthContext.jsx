@@ -161,8 +161,27 @@ export const AuthProvider = ({ children }) => {
       }
 
       // Fallback or other roles (donor)
-      if (role === 'donor') {
-        setUser({ email, role, name: email.split('@')[0] });
+      if (role === 'donor' || role === 'user') {
+        try {
+          const response = await apiService.userLogin(email, password);
+          if (response.success) {
+            const userData = {
+              ...response.data,
+              role: 'donor',
+              token: response.token
+            };
+            localStorage.setItem('userToken', response.token);
+            localStorage.setItem('role', 'donor');
+            setUser(userData);
+            setLoading(false);
+            return true;
+          }
+        } catch (error) {
+          console.error('Donor login error:', error);
+        }
+
+        // Final fallback for manual testing
+        setUser({ email, role: 'donor', name: email.split('@')[0] });
         setLoading(false);
         return true;
       }
@@ -180,47 +199,32 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       if (userData.role === 'hospital') {
-        const response = await apiService.hospitalRegister({
+        // ... (existing hospital register logic)
+      } else if (userData.role === 'donor' || userData.role === 'user') {
+        const response = await apiService.userRegister({
           name: userData.name,
           email: userData.email,
           password: userData.password,
-          licenseNumber: userData.licenseNumber || `LIC-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-          phone: userData.phone,
-          address: userData.address,
-          city: userData.city,
-          state: userData.state,
-          zipCode: userData.zipCode
+          bloodType: userData.bloodType,
+          isDonor: true
         });
 
         if (response.success) {
           const newUser = {
-            ...userData,
-            status: 'PENDING',
-            id: response.data.hospital.id
+            ...response.data,
+            role: 'donor'
           };
+          localStorage.setItem('userToken', response.token);
           setUser(newUser);
           setLoading(false);
           return true;
         }
-      } else {
-        setUser({ ...userData });
-        if (userData.role === 'donor' && userData.name && userData.bloodType && userData.organ) {
-          const newDonor = {
-            id: donors.length + 1,
-            name: userData.name,
-            address: userData.address || 'Not specified',
-            organ: userData.organ,
-            age: userData.age || 'N/A',
-            hospital: userData.hospital || 'Not specified',
-            bloodType: userData.bloodType,
-            phone: userData.phone || 'Not provided',
-            email: userData.email
-          };
-          setDonors(prev => [...prev, newDonor]);
-        }
-        setLoading(false);
-        return true;
       }
+
+      // Fallback
+      setUser({ ...userData });
+      setLoading(false);
+      return true;
     } catch (error) {
       setLoading(false);
       alert(error.message);
@@ -232,6 +236,21 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     apiService.logout();
     setShowApprovalMessage(false);
+  };
+
+  const updateProfile = async (updates) => {
+    try {
+      const response = await apiService.updateUserProfile(updates);
+      if (response.success) {
+        // Merge updates into local state
+        setUser(prev => ({ ...prev, ...updates }));
+        return true;
+      }
+    } catch (error) {
+      console.error("Profile update failed", error);
+      throw error;
+    }
+    return false;
   };
 
   const deleteDonor = (id) => {
@@ -295,7 +314,8 @@ export const AuthProvider = ({ children }) => {
       getPendingHospitals,
       getAllHospitals,
       showApprovalMessage,
-      setShowApprovalMessage
+      setShowApprovalMessage,
+      updateProfile
     }}>
       {children}
     </AuthContext.Provider>

@@ -1,14 +1,10 @@
 import jwt from 'jsonwebtoken';
-<<<<<<< HEAD
 import mongoose from 'mongoose';
 import Hospital from '../models/Hospital.js';
 import Donor from '../models/Donor.js';
 import Request from '../models/Request.js';
 import Transplant from '../models/Transplant.js';
 import AuditLog from '../models/AuditLog.js';
-=======
-import Hospital from '../models/Hospital.js';
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
 import { ErrorResponse, asyncHandler } from '../middleware/error.js';
 
 // Generate JWT Token
@@ -116,15 +112,10 @@ const hospitalLogin = asyncHandler(async (req, res) => {
     throw new ErrorResponse('Hospital account is deactivated', 401);
   }
 
-<<<<<<< HEAD
-  // Status check moved to middleware/frontend redirect logic
-  // if (hospital.status !== 'approved') { ... }
-=======
   // Check if hospital is approved
   if (hospital.status !== 'approved') {
     throw new ErrorResponse(`Hospital account is ${hospital.status}. Please wait for admin approval.`, 403);
   }
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
 
   // Check password
   const isPasswordMatch = await hospital.comparePassword(password);
@@ -208,7 +199,6 @@ const updateHospitalProfile = asyncHandler(async (req, res) => {
 
   await hospital.save();
 
-<<<<<<< HEAD
   await AuditLog.create({
     actionType: 'UPDATE',
     performedBy: { id: req.hospital.id, name: req.hospital.name, role: 'Hospital' },
@@ -217,8 +207,6 @@ const updateHospitalProfile = asyncHandler(async (req, res) => {
     details: 'Hospital profile updated'
   });
 
-=======
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
   res.status(200).json({
     success: true,
     message: 'Profile updated successfully',
@@ -275,7 +263,6 @@ const getPublicHospitalById = asyncHandler(async (req, res) => {
   });
 });
 
-<<<<<<< HEAD
 // @desc    Get Hospital Dashboard Stats
 // @route   GET /api/hospital/dashboard
 // @access  Private (Approved Hospital)
@@ -511,15 +498,12 @@ const updateTransplantStatus = asyncHandler(async (req, res) => {
   });
 });
 
-=======
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
 export {
   hospitalRegister,
   hospitalLogin,
   getHospitalProfile,
   updateHospitalProfile,
   getPublicHospitals,
-<<<<<<< HEAD
   getPublicHospitalById,
   getDashboardStats,
   getHospitalDonors,
@@ -529,8 +513,4 @@ export {
   createHospitalRequest,
   getHospitalTransplants,
   updateTransplantStatus
-=======
-  getPublicHospitalById
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
 };
-

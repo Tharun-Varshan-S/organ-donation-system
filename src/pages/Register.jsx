@@ -115,11 +115,10 @@ const Register = () => {
               required
             />
             <Input
-              label="Hospital"
+              label="Hospital (Optional)"
               placeholder="Hospital Name"
               value={formData.hospital}
               onChange={(e) => setFormData({ ...formData, hospital: e.target.value })}
-              required
             />
             <Select
               label="Blood Type"

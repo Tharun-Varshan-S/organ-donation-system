@@ -26,6 +26,9 @@ build/
 .env.*
 !.env.example
 
+# Local dev config (contains secrets)
+backend/config/local.env.json
+
 # IDE and editor files
 .vscode/
 .idea/

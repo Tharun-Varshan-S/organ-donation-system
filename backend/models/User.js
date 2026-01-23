@@ -30,6 +30,34 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    phone: {
+        type: String,
+        required: false
+    },
+    organ: {
+        type: String, // e.g., "Kidney", "Liver"
+        required: false
+    },
+    visibilityStatus: {
+        type: String,
+        enum: ['public', 'private'],
+        default: 'private'
+    },
+    availabilityStatus: {
+        type: String,
+        enum: ['Active', 'Inactive'],
+        default: 'Active'
+    },
+    donations: [{
+        organ: String,
+        hospital: String,
+        date: Date,
+        status: {
+            type: String,
+            enum: ['Completed', 'Pending', 'Rejected'],
+            default: 'Pending'
+        }
+    }],
     createdAt: {
         type: Date,
         default: Date.now

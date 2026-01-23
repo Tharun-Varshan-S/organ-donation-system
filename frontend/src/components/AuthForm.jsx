@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import './AuthForm.css'
 
-<<<<<<< HEAD
 const AuthForm = ({
   selectedRole,
   authMode,
@@ -9,15 +8,6 @@ const AuthForm = ({
   onSubmit,
   statusMessage,
   isLoading
-=======
-const AuthForm = ({ 
-  selectedRole, 
-  authMode, 
-  onAuthModeChange, 
-  onSubmit, 
-  statusMessage, 
-  isLoading 
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
 }) => {
   const [formData, setFormData] = useState({
     email: '',
@@ -25,13 +15,9 @@ const AuthForm = ({
     name: '',
     hospitalName: '',
     licenseNumber: '',
-<<<<<<< HEAD
     secretKey: '',
     bloodType: '',
     isDonor: false
-=======
-    secretKey: ''
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
   })
 
   const handleInputChange = (e) => {
@@ -72,13 +58,8 @@ const AuthForm = ({
         >
           Register
         </button>
-<<<<<<< HEAD
         <div
           className="toggle-indicator"
-=======
-        <div 
-          className="toggle-indicator" 
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
           aria-hidden="true"
           style={{
             left: isLogin ? '4px' : '50%'
@@ -88,15 +69,9 @@ const AuthForm = ({
 
       {/* Status Messages */}
       {statusMessage.text && (
-<<<<<<< HEAD
         <div
           className={`status-message visible ${statusMessage.type}`}
           role="alert"
-=======
-        <div 
-          className={`status-message visible ${statusMessage.type}`}
-          role="alert" 
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
           aria-live="polite"
         >
           {statusMessage.text}
@@ -153,7 +128,6 @@ const AuthForm = ({
               />
             </div>
 
-<<<<<<< HEAD
             {/* User Specific Fields */}
             {selectedRole === 'user' && (
               <div className="user-fields">
@@ -190,8 +164,6 @@ const AuthForm = ({
               </div>
             )}
 
-=======
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
             {/* Hospital Specific Fields */}
             {selectedRole === 'hospital' && (
               <div className="hospital-fields">
@@ -257,13 +229,8 @@ const AuthForm = ({
       <div className="card-footer">
         <p>
           {isLogin ? "Don't have an account? " : "Already have an account? "}
-<<<<<<< HEAD
           <button
             type="button"
-=======
-          <button 
-            type="button" 
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
             className="text-button"
             onClick={() => onAuthModeChange(isLogin ? 'register' : 'login')}
           >

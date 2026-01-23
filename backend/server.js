@@ -1,37 +1,48 @@
-<<<<<<< HEAD
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-=======
-import dotenv from 'dotenv';
-dotenv.config();
-
-import express from 'express';
-import cors from 'cors';
-import rateLimit from 'express-rate-limit';
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import connectDB from './config/database.js';
 import { errorHandler, notFound } from './middleware/error.js';
 
 // Route imports
 import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
-import hospitalRoutes from './routes/hospitals.js'; // Note: check filename
-import legacyHospitalRoutes from './routes/hospital.js'; // From remote
-import generalRoutes from './routes/route.js'; // From remote
-<<<<<<< HEAD
+import hospitalRoutes from './routes/hospitals.js';
+import legacyHospitalRoutes from './routes/hospital.js';
+import generalRoutes from './routes/route.js';
 import userRoutes from './routes/user.js';
 
 dotenv.config();
 
-// Connect to database
-connectDB();
-=======
+// Optional local dev config file (fallback when `.env` files are blocked/ignored)
+// Create: `backend/config/local.env.json`
+// Note: `.env` file takes precedence over local.env.json
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const localEnvPath = path.join(__dirname, 'config', 'local.env.json');
+try {
+  if (fs.existsSync(localEnvPath)) {
+    const localEnv = JSON.parse(fs.readFileSync(localEnvPath, 'utf8'));
+    for (const [k, v] of Object.entries(localEnv)) {
+      // Only set if not already defined in process.env (from .env file)
+      if (v != null && !process.env[k]) {
+        process.env[k] = String(v);
+      }
+    }
+  }
+} catch (e) {
+  console.warn(`⚠️  Failed to read ${localEnvPath}: ${e.message}`);
+}
 
 // Connect to database
+// Use await if top-level await is supported, otherwise just call it. 
+// Given the previous error "SyntaxError", standard call is safer unless 
+// we are sure package.json has "type": "module" AND node version supports it.
+// The file has "type": "module" in user's previous steps context.
 await connectDB();
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
 
 const app = express();
 
@@ -46,6 +57,13 @@ const limiter = rateLimit({
 });
 
 // Middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  if (req.method === 'POST' || req.method === 'PUT') {
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+  }
+  next();
+});
 app.use(limiter);
 app.use(cors({
   origin: [
@@ -72,17 +90,14 @@ app.get('/api/health', (req, res) => {
 // API Routes
 app.use('/api/admin', authRoutes);
 app.use('/api/admin', adminRoutes);
-<<<<<<< HEAD
+
 // Hospital Dashboard & Management API (Singular)
 app.use('/api/hospital', legacyHospitalRoutes);
 
 // Public Hospital Directory (Plural)
 app.use('/api/hospitals', hospitalRoutes);
 app.use('/api/users', userRoutes);
-=======
-app.use('/api/hospitals', hospitalRoutes);
-if (legacyHospitalRoutes) app.use('/api/legacy-hospitals', legacyHospitalRoutes);
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
+
 if (generalRoutes) app.use('/', generalRoutes);
 
 // Error handling middleware
@@ -106,4 +121,3 @@ process.on('unhandledRejection', (err, promise) => {
 });
 
 export default app;
-

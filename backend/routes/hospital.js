@@ -1,6 +1,5 @@
 import express from 'express';
 import {
-<<<<<<< HEAD
   getHospitalProfile,
   updateHospitalProfile,
   getPublicHospitals,
@@ -19,16 +18,6 @@ import {
   hospitalLogin
 } from '../controllers/authController.js';
 import { protectHospital, hospitalOnly, ensureApproved } from '../middleware/auth.js';
-=======
-  hospitalRegister,
-  hospitalLogin,
-  getHospitalProfile,
-  updateHospitalProfile,
-  getPublicHospitals,
-  getPublicHospitalById
-} from '../controllers/hospitalController.js';
-import { protectHospital, hospitalOnly } from '../middleware/auth.js';
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
 
 const router = express.Router();
 
@@ -42,7 +31,6 @@ router.post('/register', hospitalRegister);
 // @route   POST /api/hospital/login
 router.post('/login', hospitalLogin);
 
-<<<<<<< HEAD
 // Protected & Approved Routes Middleware Wrapper (Optional, but defining individually is clearer)
 
 // @route   GET /api/hospital/profile
@@ -71,12 +59,5 @@ router.route('/requests')
 // @route   GET / PUT /api/hospital/transplants
 router.get('/transplants', protectHospital, hospitalOnly, ensureApproved, getHospitalTransplants);
 router.put('/transplants/:id', protectHospital, hospitalOnly, ensureApproved, updateTransplantStatus);
-=======
-// @route   GET /api/hospital/profile
-router.get('/profile', protectHospital, hospitalOnly, getHospitalProfile);
-
-// @route   PUT /api/hospital/profile
-router.put('/profile', protectHospital, hospitalOnly, updateHospitalProfile);
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
 
 export default router;

@@ -16,11 +16,7 @@ const AuthPage = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(!!localStorage.getItem('adminToken'))
 
-<<<<<<< HEAD
   const { login, register } = useAuth()
-=======
-  const { login } = useAuth()
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
   const navigate = useNavigate()
 
   // Handle role change with animation
@@ -50,7 +46,6 @@ const AuthPage = () => {
       return
     }
 
-<<<<<<< HEAD
     // Handle User Auth
     // Handle User Auth
     if (selectedRole === 'user') {
@@ -72,22 +67,6 @@ const AuthPage = () => {
         setIsLoading(false);
       }
       return;
-=======
-    // Handle User Login (Mock)
-    if (selectedRole === 'user') {
-      try {
-        await login(formData.email, formData.password, 'user')
-        setStatusMessage({
-          text: 'Login successful! Redirecting...',
-          type: 'success'
-        })
-        setTimeout(() => navigate('/'), 1000)
-      } catch (e) {
-        setStatusMessage({ text: 'Login failed', type: 'error' })
-      }
-      setIsLoading(false)
-      return
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
     }
 
     // Call backend API
@@ -128,24 +107,16 @@ const AuthPage = () => {
               type: 'success'
             })
           } else if (selectedRole === 'hospital') {
-<<<<<<< HEAD
             // await login(...) // Context login might expect generic structure, but we have specific hospital handling
             // Manually store for HospitalLayout usage
             localStorage.setItem('token', response.token);
             localStorage.setItem('hospital', JSON.stringify(response.hospital));
 
-=======
-            await login(formData.email, formData.password, 'hospital')
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
             setStatusMessage({
               text: 'Login successful! Redirecting to Hospital Dashboard...',
               type: 'success'
             })
-<<<<<<< HEAD
             setTimeout(() => navigate('/hospital/dashboard'), 1000)
-=======
-            setTimeout(() => navigate('/hospitals'), 1000)
->>>>>>> ec10091 (Implemented Admin Dashboard UI enhancements)
           }
         } else {
           setStatusMessage({
