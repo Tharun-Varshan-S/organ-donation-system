@@ -1,0 +1,274 @@
+.analytics-page {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    padding: 1rem;
+}
+
+.analytics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.analytics-header h2 {
+    margin: 0;
+    color: #1e293b;
+    font-size: 1.75rem;
+}
+
+.text-gray-500 {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+}
+
+.period-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.period-selector select {
+    border: none;
+    outline: none;
+    font-size: 0.9rem;
+    color: #1e293b;
+    cursor: pointer;
+    background: transparent;
+}
+
+/* Metrics Cards */
+.metrics-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.metric-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.metric-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.metric-icon.sla {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #1e40af;
+}
+
+.metric-icon.success {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    color: #166534;
+}
+
+.metric-icon.conversion {
+    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+    color: #4f46e5;
+}
+
+.metric-content {
+    flex: 1;
+}
+
+.metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.metric-label {
+    font-size: 0.875rem;
+    color: #64748b;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.metric-details {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+/* Charts Grid */
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+}
+
+.chart-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.chart-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    color: #1e293b;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.chart-footer {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f1f5f9;
+}
+
+.chart-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.stat-value.breached {
+    color: #ef4444;
+}
+
+.stat-value.success {
+    color: #22c55e;
+}
+
+/* Report Table */
+.report-table-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.table-header {
+    margin-bottom: 1.5rem;
+}
+
+.table-header h3 {
+    margin: 0;
+    color: #1e293b;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.analytics-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.analytics-table thead {
+    background: #f8fafc;
+}
+
+.analytics-table th {
+    padding: 1rem;
+    text-align: left;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.analytics-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1e293b;
+}
+
+.analytics-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.organ-type-cell {
+    text-transform: capitalize;
+    font-weight: 600;
+}
+
+.rate-cell {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.rate-value {
+    font-weight: 600;
+    min-width: 50px;
+}
+
+.rate-bar {
+    flex: 1;
+    height: 8px;
+    background: #f1f5f9;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.rate-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.no-data {
+    text-align: center;
+    color: #94a3b8;
+    font-style: italic;
+    padding: 2rem;
+}
+
+.loading-state,
+.error-state {
+    text-align: center;
+    padding: 3rem;
+    color: #64748b;
+}
+
