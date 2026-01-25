@@ -46,7 +46,19 @@ const requestSchema = new mongoose.Schema({
     ref: 'Donor'
   },
   notes: String,
-  expiryDate: Date
+  expiryDate: Date,
+  // SLA Tracking
+  slaBreachedAt: Date,
+  delayReason: String,
+  isEmergency: { type: Boolean, default: false },
+  emergencyEscalated: { type: Boolean, default: false },
+  escalatedAt: Date,
+  // Lifecycle tracking
+  lifecycle: [{
+    stage: { type: String, enum: ['created', 'matched', 'scheduled', 'in_progress', 'completed', 'cancelled'] },
+    timestamp: { type: Date, default: Date.now },
+    notes: String
+  }]
 }, {
   timestamps: true
 });

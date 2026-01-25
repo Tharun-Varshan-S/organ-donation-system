@@ -339,6 +339,14 @@ class ApiService {
     return this.handleResponse(response)
   }
 
+  // Hospital Analytics
+  async getHospitalAnalytics(period = '30') {
+    const response = await fetch(`${API_BASE_URL}/hospital/analytics?period=${period}`, {
+      headers: this.getAuthHeaders()
+    })
+    return this.handleResponse(response)
+  }
+
   // Logout
   logout() {
     this.setToken(null)

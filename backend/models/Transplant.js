@@ -19,10 +19,12 @@ const transplantSchema = new mongoose.Schema({
     name: String,
     age: Number,
     bloodType: String,
-    hospital: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Hospital'
-    }
+  hospital: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Hospital',
+    required: true
+  },
+  surgeryDate: Date // Add surgeryDate field for compatibility
   },
   organType: {
     type: String,

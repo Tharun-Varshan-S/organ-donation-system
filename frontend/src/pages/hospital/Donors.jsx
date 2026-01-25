@@ -7,7 +7,13 @@ import {
     Edit,
     Trash2,
     User,
-    Droplet
+    Droplet,
+    AlertCircle,
+    Clock,
+    CheckCircle,
+    XCircle,
+    Activity,
+    Zap
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import './Donors.css';
@@ -17,8 +23,11 @@ const Donors = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [bloodFilter, setBloodFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [currentDonor, setCurrentDonor] = useState(null); // For Edit/View
+    const [showTimeline, setShowTimeline] = useState(false);
+    const [donorTimeline, setDonorTimeline] = useState(null);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -161,12 +170,48 @@ const Donors = () => {
         });
     };
 
+    const getStatusIcon = (status) => {
+        switch (status) {
+            case 'active': return <CheckCircle size={16} className="status-icon active" />;
+            case 'inactive': return <XCircle size={16} className="status-icon inactive" />;
+            case 'deceased': return <AlertCircle size={16} className="status-icon deceased" />;
+            case 'matched': return <Clock size={16} className="status-icon matched" />;
+            default: return <User size={16} className="status-icon" />;
+        }
+    };
+
+    const isEmergencyEligible = (donor) => {
+        // Emergency eligible if: active status, has critical organs (heart, liver, lung), and verified
+        return donor.status === 'active' && 
+               donor.isVerified &&
+               donor.donationPreferences?.organTypes?.some(organ => 
+                   ['heart', 'liver', 'lung'].includes(organ)
+               );
+    };
+
+    const fetchDonorTimeline = async (donorId) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`http://localhost:5000/api/hospital/donors/${donorId}/timeline`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                setDonorTimeline(data.data);
+                setShowTimeline(true);
+            }
+        } catch (error) {
+            console.error('Error fetching timeline:', error);
+        }
+    };
+
     const filteredDonors = donors.filter(donor => {
         const matchesSearch =
             donor.personalInfo.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             donor.personalInfo.lastName?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesBlood = bloodFilter ? donor.medicalInfo.bloodType === bloodFilter : true;
-        return matchesSearch && matchesBlood;
+        const matchesStatus = statusFilter ? donor.status === statusFilter : true;
+        return matchesSearch && matchesBlood && matchesStatus;
     });
 
     return (
@@ -189,6 +234,17 @@ const Donors = () => {
                     >
                         <option value="">All Blood Types</option>
                         {bloodTypes.map(bt => <option key={bt} value={bt}>{bt}</option>)}
+                    </select>
+                    <select
+                        className="filter-select"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                        <option value="">All Statuses</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Unavailable</option>
+                        <option value="deceased">Deceased</option>
+                        <option value="matched">Matched</option>
                     </select>
                 </div>
                 <button className="primary-btn" onClick={() => { resetForm(); setShowModal(true); }}>
@@ -213,7 +269,16 @@ const Donors = () => {
                             <div className="donor-card-header">
                                 <div>
                                     <h3>{donor.personalInfo.firstName} {donor.personalInfo.lastName}</h3>
-                                    <span className={`status-pill ${donor.status}`}>{donor.status}</span>
+                                    <div className="status-row">
+                                        {getStatusIcon(donor.status)}
+                                        <span className={`status-pill ${donor.status}`}>{donor.status}</span>
+                                        {isEmergencyEligible(donor) && (
+                                            <span className="emergency-badge">
+                                                <Zap size={12} />
+                                                Emergency Ready
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="blood-badge">
                                     <Droplet size={14} fill="currentColor" />
@@ -227,10 +292,16 @@ const Donors = () => {
                             </div>
 
                             <div className="donor-card-footer">
+                                <button 
+                                    className="icon-btn timeline-btn" 
+                                    onClick={() => fetchDonorTimeline(donor._id)}
+                                    title="View Timeline"
+                                >
+                                    <Activity size={18} />
+                                </button>
                                 <button className="icon-btn" onClick={() => openEdit(donor)}>
                                     <Edit size={18} />
                                 </button>
-                                {/* Add Delete/Archive logic here if needed */}
                             </div>
                         </motion.div>
                     ))
@@ -302,6 +373,50 @@ const Donors = () => {
                                 <button type="submit" className="submit-btn">{currentDonor ? 'Update' : 'Register'}</button>
                             </div>
                         </form>
+                    </motion.div>
+                </div>
+            )}
+
+            {/* Timeline Modal */}
+            {showTimeline && donorTimeline && (
+                <div className="modal-overlay" onClick={() => setShowTimeline(false)}>
+                    <motion.div
+                        className="modal-content timeline-modal"
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="modal-header">
+                            <h2>Donor Timeline: {donorTimeline.donor.name}</h2>
+                            <button onClick={() => setShowTimeline(false)}>
+                                <Plus size={24} style={{ transform: 'rotate(45deg)' }} />
+                            </button>
+                        </div>
+                        <div className="timeline-container">
+                            {donorTimeline.timeline.map((event, index) => (
+                                <div key={index} className="timeline-item">
+                                    <div className="timeline-marker">
+                                        {event.type === 'donor_registered' && <User size={16} />}
+                                        {event.type === 'request_matched' && <Activity size={16} />}
+                                        {event.type === 'transplant' && <CheckCircle size={16} />}
+                                    </div>
+                                    <div className="timeline-content">
+                                        <div className="timeline-header">
+                                            <h4>{event.title}</h4>
+                                            <span className="timeline-date">
+                                                {new Date(event.timestamp).toLocaleString()}
+                                            </span>
+                                        </div>
+                                        <p className="timeline-details">{event.details}</p>
+                                        {event.status && (
+                                            <span className={`timeline-status ${event.status}`}>
+                                                {event.status}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </motion.div>
                 </div>
             )}

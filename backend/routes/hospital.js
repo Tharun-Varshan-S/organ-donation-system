@@ -13,7 +13,11 @@ import {
   getHospitalTransplants,
   updateTransplantStatus,
   getNotifications,
-  markNotificationRead
+  markNotificationRead,
+  captureSLABreach,
+  getDonorTimeline,
+  updateTransplantOutcome,
+  getHospitalAnalytics
 } from '../controllers/hospitalController.js';
 import {
   hospitalRegister,
@@ -61,6 +65,16 @@ router.route('/requests')
 // @route   GET / PUT /api/hospital/transplants
 router.get('/transplants', protectHospital, hospitalOnly, ensureApproved, getHospitalTransplants);
 router.put('/transplants/:id', protectHospital, hospitalOnly, ensureApproved, updateTransplantStatus);
+router.put('/transplants/:id/outcome', protectHospital, hospitalOnly, ensureApproved, updateTransplantOutcome);
+
+// @route   PUT /api/hospital/requests/:id/sla-breach
+router.put('/requests/:id/sla-breach', protectHospital, hospitalOnly, ensureApproved, captureSLABreach);
+
+// @route   GET /api/hospital/donors/:id/timeline
+router.get('/donors/:id/timeline', protectHospital, hospitalOnly, ensureApproved, getDonorTimeline);
+
+// @route   GET /api/hospital/analytics
+router.get('/analytics', protectHospital, hospitalOnly, ensureApproved, getHospitalAnalytics);
 
 // @route   GET /api/hospital/:id
 // @desc    Get public hospital details by ID (Must be last route to match)

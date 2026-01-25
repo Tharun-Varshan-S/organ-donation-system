@@ -5,7 +5,11 @@ import {
     AlertCircle,
     CheckCircle2,
     XCircle,
-    Activity
+    Activity,
+    AlertTriangle,
+    Lock,
+    FileText,
+    TrendingDown
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import './Requests.css';
@@ -15,6 +19,10 @@ const Requests = () => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState(null);
+    const [showTimeline, setShowTimeline] = useState(false);
+    const [showDelayModal, setShowDelayModal] = useState(false);
+    const [delayReason, setDelayReason] = useState('');
+    const [currentRequestForDelay, setCurrentRequestForDelay] = useState(null);
 
     const [formData, setFormData] = useState({
         patientName: '',
@@ -47,7 +55,7 @@ const Requests = () => {
         }
     };
 
-    const calculateSLA = (createdAt, urgency) => {
+    const calculateSLA = (createdAt, urgency, slaBreachedAt) => {
         const start = new Date(createdAt).getTime();
         const now = new Date().getTime();
         const elapsedHours = (now - start) / (1000 * 60 * 60);
@@ -62,9 +70,50 @@ const Requests = () => {
 
         const limit = slaMap[urgency] || 72;
         const remaining = limit - elapsedHours;
+        const percentage = Math.max(0, Math.min(100, (remaining / limit) * 100));
 
-        if (remaining < 0) return { text: 'Breached', color: 'red' };
-        return { text: `${Math.round(remaining)}h remaining`, color: remaining < 5 ? 'orange' : 'green' };
+        if (slaBreachedAt || remaining < 0) {
+            return { 
+                text: 'Breached', 
+                color: 'red', 
+                percentage: 0,
+                isBreached: true
+            };
+        }
+        
+        return { 
+            text: `${Math.round(remaining)}h remaining`, 
+            color: remaining < (limit * 0.2) ? 'red' : remaining < (limit * 0.5) ? 'orange' : 'green',
+            percentage,
+            isBreached: false
+        };
+    };
+
+    const handleDelayReasonSubmit = async (e) => {
+        e.preventDefault();
+        if (!delayReason.trim()) return;
+
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`http://localhost:5000/api/hospital/requests/${currentRequestForDelay._id}/sla-breach`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ delayReason })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                fetchRequests();
+                setShowDelayModal(false);
+                setDelayReason('');
+                setCurrentRequestForDelay(null);
+            }
+        } catch (error) {
+            console.error('Error capturing delay reason:', error);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -127,17 +176,59 @@ const Requests = () => {
                 </button>
             </div>
 
+            {/* Emergency Summary Cards */}
+            {requests.filter(r => r.patient.urgencyLevel === 'critical' && r.status !== 'completed').length > 0 && (
+                <div className="emergency-summary">
+                    <h3 className="emergency-summary-title">
+                        <AlertTriangle size={20} />
+                        Emergency Requests Summary
+                    </h3>
+                    <div className="emergency-cards">
+                        {requests
+                            .filter(r => r.patient.urgencyLevel === 'critical' && r.status !== 'completed')
+                            .slice(0, 3)
+                            .map(req => {
+                                const sla = calculateSLA(req.createdAt, req.patient.urgencyLevel, req.slaBreachedAt);
+                                return (
+                                    <div key={req._id} className="emergency-card">
+                                        <div className="emergency-card-header">
+                                            <span className="emergency-request-id">{req.requestId}</span>
+                                            {req.isEmergency && <Lock size={14} />}
+                                        </div>
+                                        <p className="emergency-patient">{req.patient.name} - {req.organType}</p>
+                                        <div className="emergency-sla">
+                                            <span className={`sla-status ${sla.color}`}>{sla.text}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                    </div>
+                </div>
+            )}
+
             <div className="requests-grid">
                 {loading ? <p>Loading requests...</p> : requests.map(request => {
-                    const sla = calculateSLA(request.createdAt, request.patient.urgencyLevel);
+                    const sla = calculateSLA(request.createdAt, request.patient.urgencyLevel, request.slaBreachedAt);
+                    const isEmergency = request.isEmergency || request.patient.urgencyLevel === 'critical';
 
                     return (
                         <motion.div
                             key={request._id}
-                            className={`request-card ${getUrgencyColor(request.patient.urgencyLevel)}`}
+                            className={`request-card ${getUrgencyColor(request.patient.urgencyLevel)} ${isEmergency ? 'emergency-locked' : ''}`}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
+                            onClick={() => {
+                                setSelectedRequest(request);
+                                setShowTimeline(true);
+                            }}
                         >
+                            {isEmergency && (
+                                <div className="emergency-lock-badge">
+                                    <Lock size={12} />
+                                    Emergency Mode
+                                </div>
+                            )}
+
                             <div className="request-header">
                                 <span className="organ-badge">{request.organType}</span>
                                 <span className={`urgency-badge ${request.patient.urgencyLevel}`}>
@@ -154,9 +245,37 @@ const Requests = () => {
                                 </div>
                             </div>
 
-                            <div className="sla-timer" style={{ color: sla.color === 'red' ? '#ef4444' : sla.color === 'orange' ? '#f97316' : '#22c55e' }}>
-                                <Clock size={14} />
-                                <span>{sla.text}</span>
+                            {/* SLA Countdown Bar */}
+                            <div className="sla-countdown-container">
+                                <div className="sla-countdown-header">
+                                    <Clock size={14} />
+                                    <span className="sla-text">{sla.text}</span>
+                                </div>
+                                <div className="sla-progress-bar">
+                                    <div 
+                                        className={`sla-progress-fill ${sla.color}`}
+                                        style={{ width: `${sla.percentage}%` }}
+                                    />
+                                </div>
+                                {sla.isBreached && !request.delayReason && (
+                                    <button
+                                        className="capture-delay-btn"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setCurrentRequestForDelay(request);
+                                            setShowDelayModal(true);
+                                        }}
+                                    >
+                                        <FileText size={12} />
+                                        Capture Delay Reason
+                                    </button>
+                                )}
+                                {request.delayReason && (
+                                    <div className="delay-reason-display">
+                                        <AlertCircle size={12} />
+                                        <span>Delay: {request.delayReason}</span>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="request-footer">
@@ -210,6 +329,92 @@ const Requests = () => {
                             <div className="modal-footer">
                                 <button type="button" className="cancel-btn" onClick={() => setShowModal(false)}>Cancel</button>
                                 <button type="submit" className="submit-btn">Submit Request</button>
+                            </div>
+                        </form>
+                    </motion.div>
+                </div>
+            )}
+
+            {/* Lifecycle Timeline Modal */}
+            {showTimeline && selectedRequest && (
+                <div className="modal-overlay" onClick={() => setShowTimeline(false)}>
+                    <motion.div
+                        className="modal-content timeline-modal"
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="modal-header">
+                            <h2>Request Lifecycle: {selectedRequest.requestId}</h2>
+                            <button onClick={() => setShowTimeline(false)}>
+                                <Plus size={24} style={{ transform: 'rotate(45deg)' }} />
+                            </button>
+                        </div>
+                        <div className="request-timeline-container">
+                            {selectedRequest.lifecycle && selectedRequest.lifecycle.length > 0 ? (
+                                selectedRequest.lifecycle.map((event, index) => (
+                                    <div key={index} className="timeline-item">
+                                        <div className="timeline-marker">
+                                            {event.stage === 'created' && <Plus size={16} />}
+                                            {event.stage === 'matched' && <CheckCircle2 size={16} />}
+                                            {event.stage === 'completed' && <CheckCircle2 size={16} />}
+                                        </div>
+                                        <div className="timeline-content">
+                                            <div className="timeline-header">
+                                                <h4>{event.stage.replace('_', ' ').toUpperCase()}</h4>
+                                                <span className="timeline-date">
+                                                    {new Date(event.timestamp).toLocaleString()}
+                                                </span>
+                                            </div>
+                                            {event.notes && <p className="timeline-details">{event.notes}</p>}
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="no-timeline">
+                                    <p>No lifecycle events recorded yet.</p>
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+
+            {/* Delay Reason Capture Modal */}
+            {showDelayModal && currentRequestForDelay && (
+                <div className="modal-overlay" onClick={() => setShowDelayModal(false)}>
+                    <motion.div
+                        className="modal-content"
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="modal-header">
+                            <h2>Capture Delay Reason</h2>
+                            <button onClick={() => setShowDelayModal(false)}>
+                                <Plus size={24} style={{ transform: 'rotate(45deg)' }} />
+                            </button>
+                        </div>
+                        <form onSubmit={handleDelayReasonSubmit}>
+                            <div className="form-section">
+                                <label>Request: {currentRequestForDelay.requestId}</label>
+                                <label>Patient: {currentRequestForDelay.patient.name}</label>
+                                <textarea
+                                    className="full-width mt-2"
+                                    placeholder="Please provide the reason for the SLA breach..."
+                                    value={delayReason}
+                                    onChange={(e) => setDelayReason(e.target.value)}
+                                    required
+                                    rows={5}
+                                />
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="cancel-btn" onClick={() => setShowDelayModal(false)}>
+                                    Cancel
+                                </button>
+                                <button type="submit" className="submit-btn">
+                                    Submit Delay Reason
+                                </button>
                             </div>
                         </form>
                     </motion.div>
