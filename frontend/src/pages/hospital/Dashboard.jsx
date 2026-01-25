@@ -6,19 +6,29 @@ import {
     AlertTriangle,
     ArrowUpRight,
     Heart,
-    Clock
+    Clock,
+    Shield,
+    TrendingUp,
+    AlertCircle,
+    Zap,
+    BarChart3,
+    Target
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, BarChart, Bar } from 'recharts';
+import apiService from '../../services/api';
 import './Dashboard.css';
 
 const HospitalDashboard = () => {
     const [stats, setStats] = useState(null);
+    const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [analyticsPeriod, setAnalyticsPeriod] = useState('30');
 
     useEffect(() => {
         fetchDashboardStats();
-    }, []);
+        fetchAnalytics();
+    }, [analyticsPeriod]);
 
     const fetchDashboardStats = async () => {
         try {
@@ -39,6 +49,17 @@ const HospitalDashboard = () => {
         }
     };
 
+    const fetchAnalytics = async () => {
+        try {
+            const data = await apiService.getHospitalAnalytics(analyticsPeriod);
+            if (data.success) {
+                setAnalytics(data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching analytics:', error);
+        }
+    };
+
     if (loading) return <div className="loading-state">Loading Dashboard...</div>;
     if (!stats) return <div className="error-state">Failed to load stats</div>;
 
@@ -48,7 +69,7 @@ const HospitalDashboard = () => {
             value: stats.donors.total,
             icon: Users,
             color: 'blue',
-            sub: `${stats.donors.active} Active`,
+            sub: `${stats.donors.active} Active, ${stats.donors.unavailable || 0} Unavailable`,
             trend: '+12%'
         },
         {
@@ -92,8 +113,78 @@ const HospitalDashboard = () => {
         { name: 'Critical', value: stats.requests.emergency, color: '#ef4444' }
     ];
 
+    // SLA Health Status
+    const slaHealth = stats.slaHealth || { atRisk: 0, nearBreach: 0, operationalReadiness: 'ready' };
+    const operationalStatus = slaHealth.operationalReadiness === 'ready' ? 'Operational Ready' : 'Attention Required';
+    const operationalColor = slaHealth.operationalReadiness === 'ready' ? 'green' : 'orange';
+
     return (
         <div className="hospital-dashboard">
+            {/* Emergency Focus Banner */}
+            {stats.criticalRequests && stats.criticalRequests.length > 0 && (
+                <motion.div
+                    className="emergency-banner"
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                >
+                    <div className="emergency-banner-content">
+                        <div className="emergency-icon">
+                            <AlertTriangle size={24} />
+                        </div>
+                        <div className="emergency-text">
+                            <h3>Critical Requests Requiring Immediate Attention</h3>
+                            <p>{stats.criticalRequests.length} critical request(s) pending action</p>
+                        </div>
+                        <div className="emergency-actions">
+                            {stats.criticalRequests.slice(0, 3).map(req => (
+                                <div key={req._id} className="emergency-item">
+                                    <span className="emergency-request-id">{req.requestId}</span>
+                                    <span className="emergency-organ">{req.organType}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </motion.div>
+            )}
+
+            {/* SLA Health Indicators & Operational Readiness */}
+            <motion.div
+                className="sla-health-section"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+            >
+                <div className={`operational-readiness-card ${operationalColor}`}>
+                    <div className="readiness-header">
+                        <Shield size={24} />
+                        <div>
+                            <h3>Operational Readiness</h3>
+                            <p className="readiness-status">{operationalStatus}</p>
+                        </div>
+                    </div>
+                    <div className="readiness-metrics">
+                        <div className="readiness-metric">
+                            <span className="metric-label">At Risk</span>
+                            <span className={`metric-value ${slaHealth.atRisk > 0 ? 'warning' : 'safe'}`}>
+                                {slaHealth.atRisk}
+                            </span>
+                        </div>
+                        <div className="readiness-metric">
+                            <span className="metric-label">Near Breach</span>
+                            <span className={`metric-value ${slaHealth.nearBreach > 0 ? 'warning' : 'safe'}`}>
+                                {slaHealth.nearBreach}
+                            </span>
+                        </div>
+                        <div className="readiness-metric">
+                            <span className="metric-label">SLA Breached</span>
+                            <span className={`metric-value ${stats.requests.slaBreached > 0 ? 'danger' : 'safe'}`}>
+                                {stats.requests.slaBreached || 0}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
             <motion.div
                 className="kpi-grid"
                 initial={{ opacity: 0, y: 20 }}
@@ -241,6 +332,129 @@ const HospitalDashboard = () => {
                     )}
                 </motion.div>
             </div>
+
+            {/* Analytics Section */}
+            {analytics && (
+                <motion.div
+                    className="analytics-section"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                >
+                    <div className="analytics-header">
+                        <div>
+                            <h2>Hospital Analytics & Reports</h2>
+                            <p className="analytics-subtitle">Performance metrics and compliance tracking</p>
+                        </div>
+                        <select
+                            className="period-selector"
+                            value={analyticsPeriod}
+                            onChange={(e) => setAnalyticsPeriod(e.target.value)}
+                        >
+                            <option value="7">Last 7 days</option>
+                            <option value="30">Last 30 days</option>
+                            <option value="90">Last 90 days</option>
+                            <option value="365">Last year</option>
+                        </select>
+                    </div>
+
+                    <div className="analytics-grid">
+                        {/* SLA Compliance */}
+                        <motion.div
+                            className="analytics-card"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.6 }}
+                        >
+                            <div className="analytics-card-header">
+                                <Shield size={24} className="analytics-icon" />
+                                <h3>SLA Compliance</h3>
+                            </div>
+                            <div className="analytics-metrics">
+                                <div className="analytics-metric">
+                                    <span className="metric-label">Total Requests</span>
+                                    <span className="metric-value-large">{analytics.slaCompliance.total}</span>
+                                </div>
+                                <div className="analytics-metric">
+                                    <span className="metric-label">Breached</span>
+                                    <span className={`metric-value-large ${analytics.slaCompliance.breached > 0 ? 'danger' : 'safe'}`}>
+                                        {analytics.slaCompliance.breached}
+                                    </span>
+                                </div>
+                                <div className="analytics-metric">
+                                    <span className="metric-label">Compliance Rate</span>
+                                    <span className={`metric-value-large ${analytics.slaCompliance.complianceRate >= 95 ? 'safe' : analytics.slaCompliance.complianceRate >= 80 ? 'warning' : 'danger'}`}>
+                                        {analytics.slaCompliance.complianceRate}%
+                                    </span>
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        {/* Success Rates */}
+                        <motion.div
+                            className="analytics-card"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.7 }}
+                        >
+                            <div className="analytics-card-header">
+                                <TrendingUp size={24} className="analytics-icon" />
+                                <h3>Transplant Success Rates</h3>
+                            </div>
+                            <div className="success-rates-list">
+                                {analytics.successRates && analytics.successRates.length > 0 ? (
+                                    analytics.successRates.map((sr, idx) => (
+                                        <div key={idx} className="success-rate-item">
+                                            <div className="success-rate-header">
+                                                <span className="organ-name">{sr.organType}</span>
+                                                <span className={`success-rate-value ${sr.successRate >= 90 ? 'safe' : sr.successRate >= 75 ? 'warning' : 'danger'}`}>
+                                                    {sr.successRate}%
+                                                </span>
+                                            </div>
+                                            <div className="success-rate-details">
+                                                <span>{sr.successful} successful / {sr.total} total</span>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="no-data">No transplant data available</div>
+                                )}
+                            </div>
+                        </motion.div>
+
+                        {/* Donor Conversion */}
+                        <motion.div
+                            className="analytics-card"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.8 }}
+                        >
+                            <div className="analytics-card-header">
+                                <Target size={24} className="analytics-icon" />
+                                <h3>Donor Conversion</h3>
+                            </div>
+                            <div className="conversion-metrics">
+                                <div className="conversion-main">
+                                    <span className="conversion-label">Conversion Rate</span>
+                                    <span className={`conversion-value ${analytics.donorConversion.conversionRate >= 50 ? 'safe' : analytics.donorConversion.conversionRate >= 30 ? 'warning' : 'danger'}`}>
+                                        {analytics.donorConversion.conversionRate}%
+                                    </span>
+                                </div>
+                                <div className="conversion-details">
+                                    <div className="conversion-detail-item">
+                                        <span className="detail-label">Total Donors</span>
+                                        <span className="detail-value">{analytics.donorConversion.total}</span>
+                                    </div>
+                                    <div className="conversion-detail-item">
+                                        <span className="detail-label">Converted to Transplants</span>
+                                        <span className="detail-value">{analytics.donorConversion.converted}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                </motion.div>
+            )}
         </div>
     );
 };

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Zap } from 'lucide-react';
 import './Profile.css';
 
 const Profile = () => {
@@ -128,9 +129,28 @@ const Profile = () => {
                 <button type="submit" className="save-btn">Save Changes</button>
             </form>
 
+            {/* Admin Remarks Section */}
+            {profile.adminRemarks && (
+                <div className="form-section admin-remarks-section">
+                    <h3>Admin Remarks</h3>
+                    <div className="admin-remarks-display">
+                        <p>{profile.adminRemarks}</p>
+                        <span className="remarks-note">Read-only • Updated by Admin</span>
+                    </div>
+                </div>
+            )}
+
             <div className="map-section">
-                <h3>Location Map</h3>
-                <div className="map-container">
+                <div className="map-header">
+                    <h3>Location Map</h3>
+                    {profile.isEmergencyReady && (
+                        <span className="emergency-ready-badge">
+                            <Zap size={16} />
+                            Emergency Ready
+                        </span>
+                    )}
+                </div>
+                <div className={`map-container ${profile.isEmergencyReady ? 'emergency-highlight' : ''}`}>
                     <iframe
                         width="100%"
                         height="400"
@@ -141,6 +161,14 @@ const Profile = () => {
                         marginHeight="0"
                         marginWidth="0"
                     ></iframe>
+                    {profile.isEmergencyReady && (
+                        <div className="emergency-overlay">
+                            <div className="emergency-overlay-content">
+                                <Zap size={24} />
+                                <p>This hospital is marked as Emergency Ready</p>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

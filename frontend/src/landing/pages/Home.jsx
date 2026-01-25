@@ -7,7 +7,7 @@ import AnimatedBackground from '../components/AnimatedBackground';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import Login from './Login';
-import DonorDashboard from './DonorDashboard';
+import DonorDashboard from '../../pages/DonorDashboard';
 import HospitalDashboard from './HospitalDashboard';
 import AdminDashboard from './AdminDashboard';
 

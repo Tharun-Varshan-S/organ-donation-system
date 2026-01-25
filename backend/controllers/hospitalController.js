@@ -269,12 +269,15 @@ const getPublicHospitalById = asyncHandler(async (req, res) => {
 // @access  Private (Approved Hospital)
 const getDashboardStats = asyncHandler(async (req, res) => {
   const hospitalId = req.hospital.id;
+  const now = new Date();
 
   // Parallel execution for performance
   const [
     donorStats,
     requestStats,
-    transplants
+    transplants,
+    recentActivity,
+    slaStats
   ] = await Promise.all([
     // Donor Stats
     Donor.aggregate([
@@ -284,12 +287,13 @@ const getDashboardStats = asyncHandler(async (req, res) => {
           _id: null,
           total: { $sum: 1 },
           active: { $sum: { $cond: [{ $eq: ["$status", "active"] }, 1, 0] } },
-          deceased: { $sum: { $cond: [{ $eq: ["$status", "deceased"] }, 1, 0] } }
+          deceased: { $sum: { $cond: [{ $eq: ["$status", "deceased"] }, 1, 0] } },
+          unavailable: { $sum: { $cond: [{ $eq: ["$status", "inactive"] }, 1, 0] } }
         }
       }
     ]),
 
-    // Request Stats
+    // Request Stats with SLA tracking
     Request.aggregate([
       { $match: { hospital: new mongoose.Types.ObjectId(hospitalId) } },
       {
@@ -297,7 +301,8 @@ const getDashboardStats = asyncHandler(async (req, res) => {
           _id: null,
           total: { $sum: 1 },
           active: { $sum: { $cond: [{ $ne: ["$status", "completed"] }, 1, 0] } },
-          emergency: { $sum: { $cond: [{ $eq: ["$patient.urgencyLevel", "critical"] }, 1, 0] } }
+          emergency: { $sum: { $cond: [{ $eq: ["$patient.urgencyLevel", "critical"] }, 1, 0] } },
+          slaBreached: { $sum: { $cond: [{ $ne: ["$slaBreachedAt", null] }, 1, 0] } }
         }
       }
     ]),
@@ -311,12 +316,78 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     AuditLog.find({ 'performedBy.id': hospitalId })
       .sort({ createdAt: -1 })
       .limit(5)
-      .lean()
+      .lean(),
+
+    // SLA Health Indicators
+    Request.aggregate([
+      { 
+        $match: { 
+          hospital: new mongoose.Types.ObjectId(hospitalId),
+          status: { $in: ['pending', 'matched'] }
+        } 
+      },
+      {
+        $project: {
+          urgencyLevel: '$patient.urgencyLevel',
+          createdAt: 1,
+          slaBreachedAt: 1,
+          hoursElapsed: {
+            $divide: [{ $subtract: [now, '$createdAt'] }, 1000 * 60 * 60]
+          }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          atRisk: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $ne: ['$slaBreachedAt', null] },
+                    { $eq: ['$urgencyLevel', 'critical'] }
+                  ]
+                },
+                1,
+                0
+              ]
+            }
+          },
+          nearBreach: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ['$slaBreachedAt', null] },
+                    { $gte: ['$hoursElapsed', 20] },
+                    { $eq: ['$urgencyLevel', 'critical'] }
+                  ]
+                },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      }
+    ])
   ]);
 
-  const donors = donorStats[0] || { total: 0, active: 0, deceased: 0 };
-  const requests = requestStats[0] || { total: 0, active: 0, emergency: 0 };
-  const recentActivity = transplants[1]; // specific index because Promise.all returns array
+  const donors = donorStats[0] || { total: 0, active: 0, deceased: 0, unavailable: 0 };
+  const requests = requestStats[0] || { total: 0, active: 0, emergency: 0, slaBreached: 0 };
+  const slaHealth = slaStats[0] || { atRisk: 0, nearBreach: 0 };
+  const recentActivityData = recentActivity || [];
+
+  // Get critical requests for emergency banner
+  const criticalRequests = await Request.find({
+    hospital: hospitalId,
+    'patient.urgencyLevel': 'critical',
+    status: { $in: ['pending', 'matched'] }
+  })
+    .sort({ createdAt: 1 })
+    .limit(5)
+    .select('requestId patient.name organType createdAt isEmergency')
+    .lean();
 
   res.status(200).json({
     success: true,
@@ -324,16 +395,24 @@ const getDashboardStats = asyncHandler(async (req, res) => {
       donors: {
         total: donors.total,
         active: donors.active,
-        deceased: donors.deceased
+        deceased: donors.deceased,
+        unavailable: donors.unavailable
       },
       requests: {
         active: requests.active,
-        emergency: requests.emergency
+        emergency: requests.emergency,
+        slaBreached: requests.slaBreached
       },
       transplants: {
-        successful: transplants[0] // first item in the transplants/activity chunk
+        successful: transplants
       },
-      recentActivity
+      recentActivity: recentActivityData,
+      slaHealth: {
+        atRisk: slaHealth.atRisk,
+        nearBreach: slaHealth.nearBreach,
+        operationalReadiness: slaHealth.atRisk === 0 && slaHealth.nearBreach === 0 ? 'ready' : 'attention'
+      },
+      criticalRequests
     }
   });
 });
@@ -430,6 +509,18 @@ const getHospitalRequests = asyncHandler(async (req, res) => {
 // @access  Private (Approved Hospital)
 const createHospitalRequest = asyncHandler(async (req, res) => {
   req.body.hospital = req.hospital.id;
+  
+  // Set emergency flag and lock if critical
+  if (req.body.patient?.urgencyLevel === 'critical') {
+    req.body.isEmergency = true;
+  }
+
+  // Initialize lifecycle
+  req.body.lifecycle = [{
+    stage: 'created',
+    timestamp: new Date(),
+    notes: 'Request created'
+  }];
 
   const request = await Request.create(req.body);
 
@@ -447,6 +538,10 @@ const createHospitalRequest = asyncHandler(async (req, res) => {
 
   // Emergency Auto-Escalation / Notification
   if (request.patient.urgencyLevel === 'critical') {
+    request.emergencyEscalated = true;
+    request.escalatedAt = new Date();
+    await request.save();
+
     await Notification.create({
       recipient: req.hospital.id,
       type: 'EMERGENCY',
@@ -457,7 +552,20 @@ const createHospitalRequest = asyncHandler(async (req, res) => {
         model: 'Request'
       }
     });
-    // ideally also notify Admin (omitted for now as per scope, or create Admin Notification here too if Notification model supports it)
+
+    // Notify Admin (assuming Admin model exists and Notification supports admin recipients)
+    // This would require checking if Notification model supports admin recipients
+    // For now, we'll create a system notification that admins can query
+    await Notification.create({
+      recipient: null, // System-level notification
+      type: 'EMERGENCY',
+      title: `Emergency Request: ${request.requestId}`,
+      message: `Hospital ${req.hospital.name} has created a critical emergency request for ${request.organType}. Patient: ${request.patient.name}`,
+      relatedEntity: {
+        id: request._id,
+        model: 'Request'
+      }
+    });
   }
 
   res.status(201).json({
@@ -470,11 +578,10 @@ const createHospitalRequest = asyncHandler(async (req, res) => {
 // @route   GET /api/hospital/transplants
 // @access  Private (Approved Hospital)
 const getHospitalTransplants = asyncHandler(async (req, res) => {
-  const transplants = await Transplant.find({ hospital: req.hospital.id })
+  const transplants = await Transplant.find({ 'recipient.hospital': req.hospital.id })
     .populate('donor', 'personalInfo.firstName personalInfo.lastName')
-    //.populate('recipient', 'patient.name') // recipient is in Request probably? Wait, Request IS the recipient need.
-    // Transplant model check needed? I saw Transplant.js earlier.
-    .sort({ surgeryDate: -1 });
+    .populate('request', 'requestId patient.name organType')
+    .sort({ surgeryDate: -1, createdAt: -1 });
 
   res.status(200).json({
     success: true,
@@ -489,7 +596,7 @@ const getHospitalTransplants = asyncHandler(async (req, res) => {
 const updateTransplantStatus = asyncHandler(async (req, res) => {
   let transplant = await Transplant.findOne({
     _id: req.params.id,
-    hospital: req.hospital.id
+    'recipient.hospital': req.hospital.id
   });
 
   if (!transplant) {
@@ -556,6 +663,329 @@ const markNotificationRead = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Capture delay reason on SLA breach
+// @route   PUT /api/hospital/requests/:id/sla-breach
+// @access  Private (Approved Hospital)
+const captureSLABreach = asyncHandler(async (req, res) => {
+  const { delayReason } = req.body;
+
+  if (!delayReason) {
+    throw new ErrorResponse('Delay reason is required', 400);
+  }
+
+  const request = await Request.findOne({
+    _id: req.params.id,
+    hospital: req.hospital.id
+  });
+
+  if (!request) {
+    throw new ErrorResponse('Request not found', 404);
+  }
+
+  request.slaBreachedAt = new Date();
+  request.delayReason = delayReason;
+
+  // Update lifecycle
+  request.lifecycle.push({
+    stage: request.status,
+    timestamp: new Date(),
+    notes: `SLA breached. Reason: ${delayReason}`
+  });
+
+  await request.save();
+
+  await Notification.create({
+    recipient: req.hospital.id,
+    type: 'SLA_WARNING',
+    title: 'SLA Breach Recorded',
+    message: `SLA breach recorded for request ${request.requestId}. Reason: ${delayReason}`,
+    relatedEntity: {
+      id: request._id,
+      model: 'Request'
+    }
+  });
+
+  res.status(200).json({
+    success: true,
+    data: request
+  });
+});
+
+// @desc    Get Donor Timeline (Donor → Request → Transplant)
+// @route   GET /api/hospital/donors/:id/timeline
+// @access  Private (Approved Hospital)
+const getDonorTimeline = asyncHandler(async (req, res) => {
+  const donor = await Donor.findOne({
+    _id: req.params.id,
+    registeredHospital: req.hospital.id
+  });
+
+  if (!donor) {
+    throw new ErrorResponse('Donor not found', 404);
+  }
+
+  // Get related requests
+  const requests = await Request.find({
+    matchedDonor: donor._id
+  })
+    .select('requestId patient.name organType status createdAt')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  // Get related transplants
+  const transplants = await Transplant.find({
+    donor: donor._id
+  })
+    .populate('request', 'requestId patient.name')
+    .select('transplantId organType status surgeryDetails.scheduledDate outcome')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const timeline = [
+    {
+      type: 'donor_registered',
+      timestamp: donor.createdAt,
+      title: 'Donor Registered',
+      details: `${donor.personalInfo.firstName} ${donor.personalInfo.lastName} registered`,
+      status: donor.status
+    },
+    ...requests.map(req => ({
+      type: 'request_matched',
+      timestamp: req.createdAt,
+      title: 'Request Matched',
+      details: `Matched to request ${req.requestId} for ${req.organType}`,
+      status: req.status,
+      requestId: req.requestId
+    })),
+    ...transplants.map(tx => ({
+      type: 'transplant',
+      timestamp: tx.surgeryDetails?.scheduledDate || tx.createdAt,
+      title: 'Transplant Performed',
+      details: `Transplant ${tx.transplantId} - ${tx.organType}`,
+      status: tx.status,
+      outcome: tx.outcome,
+      transplantId: tx.transplantId
+    }))
+  ].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  res.status(200).json({
+    success: true,
+    data: {
+      donor: {
+        id: donor._id,
+        name: `${donor.personalInfo.firstName} ${donor.personalInfo.lastName}`,
+        status: donor.status
+      },
+      timeline
+    }
+  });
+});
+
+// @desc    Update Transplant Outcome
+// @route   PUT /api/hospital/transplants/:id/outcome
+// @access  Private (Approved Hospital)
+const updateTransplantOutcome = asyncHandler(async (req, res) => {
+  const { success, complications, notes, followUpRequired } = req.body;
+
+  let transplant = await Transplant.findOne({
+    _id: req.params.id,
+    'recipient.hospital': req.hospital.id
+  });
+
+  if (!transplant) {
+    throw new ErrorResponse('Transplant record not found', 404);
+  }
+
+  transplant.outcome = {
+    success: success !== undefined ? success : transplant.outcome?.success,
+    complications: complications || transplant.outcome?.complications || [],
+    notes: notes || transplant.outcome?.notes || '',
+    followUpRequired: followUpRequired !== undefined ? followUpRequired : (transplant.outcome?.followUpRequired ?? true)
+  };
+
+  if (transplant.status !== 'completed') {
+    transplant.status = 'completed';
+  }
+
+  await transplant.save();
+
+  // Auto-calculate hospital success metrics
+  const hospital = await Hospital.findById(req.hospital.id);
+  const totalTransplants = await Transplant.countDocuments({
+    'recipient.hospital': req.hospital.id,
+    status: 'completed'
+  });
+  const successfulTransplants = await Transplant.countDocuments({
+    'recipient.hospital': req.hospital.id,
+    status: 'completed',
+    'outcome.success': true
+  });
+
+  hospital.stats.successfulTransplants = successfulTransplants;
+  hospital.stats.successRate = totalTransplants > 0 
+    ? Math.round((successfulTransplants / totalTransplants) * 100) 
+    : 0;
+  await hospital.save();
+
+  await AuditLog.create({
+    actionType: 'UPDATE',
+    performedBy: { id: req.hospital.id, name: req.hospital.name, role: 'Hospital' },
+    entityType: 'TRANSPLANT',
+    entityId: transplant._id,
+    details: `Transplant outcome updated. Success: ${success}, Complications: ${complications?.length || 0}`
+  });
+
+  res.status(200).json({
+    success: true,
+    data: transplant
+  });
+});
+
+// @desc    Get Hospital Analytics
+// @route   GET /api/hospital/analytics
+// @access  Private (Approved Hospital)
+const getHospitalAnalytics = asyncHandler(async (req, res) => {
+  const hospitalId = req.hospital.id;
+  const { period = '30' } = req.query; // days
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - parseInt(period));
+
+  // SLA Compliance
+  const slaCompliance = await Request.aggregate([
+    {
+      $match: {
+        hospital: new mongoose.Types.ObjectId(hospitalId),
+        createdAt: { $gte: startDate }
+      }
+    },
+    {
+      $project: {
+        urgencyLevel: '$patient.urgencyLevel',
+        createdAt: 1,
+        slaBreachedAt: 1,
+        status: 1,
+        slaLimit: {
+          $switch: {
+            branches: [
+              { case: { $eq: ['$patient.urgencyLevel', 'critical'] }, then: 24 },
+              { case: { $eq: ['$patient.urgencyLevel', 'high'] }, then: 48 },
+              { case: { $eq: ['$patient.urgencyLevel', 'medium'] }, then: 72 },
+              { case: { $eq: ['$patient.urgencyLevel', 'low'] }, then: 168 }
+            ],
+            default: 72
+          }
+        }
+      }
+    },
+    {
+      $project: {
+        urgencyLevel: 1,
+        createdAt: 1,
+        slaBreachedAt: 1,
+        status: 1,
+        slaLimit: 1,
+        hoursElapsed: {
+          $divide: [
+            { $subtract: [new Date(), '$createdAt'] },
+            1000 * 60 * 60
+          ]
+        },
+        isBreached: { $ne: ['$slaBreachedAt', null] }
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: 1 },
+        breached: { $sum: { $cond: ['$isBreached', 1, 0] } },
+        compliant: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } }
+      }
+    }
+  ]);
+
+  // Success Rates
+  const successRates = await Transplant.aggregate([
+    {
+      $match: {
+        hospital: new mongoose.Types.ObjectId(hospitalId),
+        createdAt: { $gte: startDate },
+        status: 'completed'
+      }
+    },
+    {
+      $group: {
+        _id: '$organType',
+        total: { $sum: 1 },
+        successful: {
+          $sum: { $cond: [{ $eq: ['$outcome.success', true] }, 1, 0] }
+        }
+      }
+    }
+  ]);
+
+  // Donor Conversion
+  const donorConversion = await Donor.aggregate([
+    {
+      $match: {
+        registeredHospital: new mongoose.Types.ObjectId(hospitalId),
+        createdAt: { $gte: startDate }
+      }
+    },
+    {
+      $lookup: {
+        from: 'transplants',
+        localField: '_id',
+        foreignField: 'donor',
+        as: 'transplants'
+      }
+    },
+    {
+      $project: {
+        status: 1,
+        hasTransplant: { $gt: [{ $size: '$transplants' }, 0] }
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: 1 },
+        converted: { $sum: { $cond: ['$hasTransplant', 1, 0] } }
+      }
+    }
+  ]);
+
+  const sla = slaCompliance[0] || { total: 0, breached: 0, compliant: 0 };
+  const conversion = donorConversion[0] || { total: 0, converted: 0 };
+
+  res.status(200).json({
+    success: true,
+    data: {
+      slaCompliance: {
+        total: sla.total,
+        breached: sla.breached,
+        compliant: sla.compliant,
+        complianceRate: sla.total > 0 
+          ? Math.round(((sla.total - sla.breached) / sla.total) * 100) 
+          : 100
+      },
+      successRates: successRates.map(sr => ({
+        organType: sr._id,
+        total: sr.total,
+        successful: sr.successful,
+        successRate: Math.round((sr.successful / sr.total) * 100)
+      })),
+      donorConversion: {
+        total: conversion.total,
+        converted: conversion.converted,
+        conversionRate: conversion.total > 0
+          ? Math.round((conversion.converted / conversion.total) * 100)
+          : 0
+      },
+      period: parseInt(period)
+    }
+  });
+});
+
 export {
   hospitalRegister,
   hospitalLogin,
@@ -572,5 +1002,9 @@ export {
   getHospitalTransplants,
   updateTransplantStatus,
   getNotifications,
-  markNotificationRead
+  markNotificationRead,
+  captureSLABreach,
+  getDonorTimeline,
+  updateTransplantOutcome,
+  getHospitalAnalytics
 };

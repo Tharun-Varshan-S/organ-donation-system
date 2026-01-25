@@ -80,6 +80,8 @@ const hospitalSchema = new mongoose.Schema({
   approvedAt: Date,
   rejectionReason: String,
   suspensionReason: String,
+  adminRemarks: String, // Read-only admin remarks displayed to hospital
+  isEmergencyReady: { type: Boolean, default: false }, // Emergency-ready indicator
   lastLogin: {
     type: Date
   }

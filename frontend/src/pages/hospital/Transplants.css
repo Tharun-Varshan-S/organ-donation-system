@@ -77,3 +77,235 @@
 .status-step:hover:not(.current) {
     background: #e2e8f0;
 }
+
+/* Page Header */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.text-gray-500 {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+}
+
+/* Success Metrics Card */
+.success-metrics-card {
+    display: flex;
+    gap: 1.5rem;
+    background: white;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.metric-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.metric-item svg {
+    color: #0ea5e9;
+}
+
+.metric-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+.metric-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.2;
+}
+
+/* Outcome Section */
+.tx-outcome-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.outcome-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.outcome-display.success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.outcome-display.failed {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.complications-count {
+    margin-left: auto;
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.log-outcome-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #e0f2fe;
+    color: #0284c7;
+    border: 1px solid #bae6fd;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    justify-content: center;
+}
+
+.log-outcome-btn:hover {
+    background: #bae6fd;
+    border-color: #7dd3fc;
+}
+
+/* Outcome Modal */
+.outcome-radio-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.outcome-radio {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex: 1;
+}
+
+.outcome-radio:hover {
+    border-color: #0ea5e9;
+    background: #f0f9ff;
+}
+
+.outcome-radio input[type="radio"] {
+    margin: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+    accent-color: #0ea5e9;
+}
+
+.outcome-radio input[type="radio"]:checked + svg {
+    color: #0ea5e9;
+}
+
+.outcome-radio span {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.complications-input {
+    margin-top: 0.75rem;
+}
+
+.complications-input input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.complications-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.complication-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #fef3c7;
+    color: #92400e;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.remove-tag {
+    background: none;
+    border: none;
+    color: #92400e;
+    cursor: pointer;
+    font-size: 1.25rem;
+    line-height: 1;
+    padding: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.remove-tag:hover {
+    background: rgba(146, 64, 14, 0.2);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-weight: 500;
+    color: #1e293b;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    accent-color: #0ea5e9;
+    cursor: pointer;
+}
+
+.full-width {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.full-width:focus {
+    outline: none;
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+}
