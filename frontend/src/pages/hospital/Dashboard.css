@@ -17,11 +17,29 @@
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
     border: 1px solid #f1f5f9;
     transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
 }
 
 .kpi-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+.kpi-action-hint {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.kpi-card:hover .kpi-action-hint {
+    opacity: 1;
 }
 
 .kpi-card.alert-card {
@@ -270,6 +288,7 @@
     display: flex;
     align-items: center;
     gap: 1.5rem;
+    position: relative;
 }
 
 .emergency-icon {
@@ -365,6 +384,57 @@
     font-size: 0.875rem;
     color: #64748b;
     font-weight: 500;
+}
+
+.sla-compliance-meter {
+    margin-bottom: 1.5rem;
+}
+
+.sla-meter-bar {
+    width: 100%;
+    height: 24px;
+    background: #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+    position: relative;
+}
+
+.sla-meter-fill {
+    height: 100%;
+    transition: width 0.5s ease;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+}
+
+.sla-meter-fill.safe {
+    background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+}
+
+.sla-meter-fill.warning {
+    background: linear-gradient(90deg, #f97316 0%, #ea580c 100%);
+}
+
+.sla-meter-fill.danger {
+    background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+}
+
+.sla-meter-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.875rem;
+}
+
+.sla-meter-percentage {
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: #1e293b;
+}
+
+.sla-meter-text {
+    color: #64748b;
 }
 
 .readiness-metrics {

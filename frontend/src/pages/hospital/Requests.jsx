@@ -9,7 +9,9 @@ import {
     AlertTriangle,
     Lock,
     FileText,
-    TrendingDown
+    TrendingDown,
+    Filter,
+    Search
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import './Requests.css';
@@ -23,6 +25,9 @@ const Requests = () => {
     const [showDelayModal, setShowDelayModal] = useState(false);
     const [delayReason, setDelayReason] = useState('');
     const [currentRequestForDelay, setCurrentRequestForDelay] = useState(null);
+    const [urgencyFilter, setUrgencyFilter] = useState('');
+    const [slaBreachFilter, setSlaBreachFilter] = useState('');
+    const [organTypeFilter, setOrganTypeFilter] = useState('');
 
     const [formData, setFormData] = useState({
         patientName: '',
@@ -36,6 +41,14 @@ const Requests = () => {
 
     useEffect(() => {
         fetchRequests();
+    }, []);
+
+    // Check URL params for filter
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('filter') === 'critical') {
+            setUrgencyFilter('critical');
+        }
     }, []);
 
     const fetchRequests = async () => {
@@ -202,6 +215,15 @@ const Requests = () => {
         }
     };
 
+    const filteredRequests = requests.filter(request => {
+        const matchesUrgency = urgencyFilter ? request.patient.urgencyLevel === urgencyFilter : true;
+        const matchesOrgan = organTypeFilter ? request.organType === organTypeFilter : true;
+        const sla = calculateSLA(request.createdAt, request.patient.urgencyLevel, request.slaBreachedAt);
+        const matchesSLA = slaBreachFilter === 'breached' ? sla.isBreached : 
+                          slaBreachFilter === 'at-risk' ? !sla.isBreached && sla.color === 'red' : true;
+        return matchesUrgency && matchesOrgan && matchesSLA;
+    });
+
     return (
         <div className="requests-page">
             <div className="page-header">
@@ -213,6 +235,44 @@ const Requests = () => {
                     <Plus size={20} />
                     New Request
                 </button>
+            </div>
+
+            {/* Filters Section */}
+            <div className="filters-section">
+                <div className="filter-group">
+                    <Filter size={18} />
+                    <span className="filter-label">Filters:</span>
+                </div>
+                <select
+                    className="filter-select"
+                    value={urgencyFilter}
+                    onChange={(e) => setUrgencyFilter(e.target.value)}
+                >
+                    <option value="">All Urgency Levels</option>
+                    <option value="critical">Critical</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                </select>
+                <select
+                    className="filter-select"
+                    value={slaBreachFilter}
+                    onChange={(e) => setSlaBreachFilter(e.target.value)}
+                >
+                    <option value="">All SLA Status</option>
+                    <option value="breached">SLA Breached</option>
+                    <option value="at-risk">At Risk</option>
+                </select>
+                <select
+                    className="filter-select"
+                    value={organTypeFilter}
+                    onChange={(e) => setOrganTypeFilter(e.target.value)}
+                >
+                    <option value="">All Organ Types</option>
+                    {['heart', 'kidney', 'liver', 'lung', 'pancreas', 'cornea'].map(organ => (
+                        <option key={organ} value={organ}>{organ}</option>
+                    ))}
+                </select>
             </div>
 
             {/* Emergency Summary Cards */}
@@ -246,7 +306,9 @@ const Requests = () => {
             )}
 
             <div className="requests-grid">
-                {loading ? <p>Loading requests...</p> : requests.map(request => {
+                {loading ? <p>Loading requests...</p> : filteredRequests.length === 0 ? (
+                    <div className="empty-state">No requests match your filters.</div>
+                ) : filteredRequests.map(request => {
                     const sla = calculateSLA(request.createdAt, request.patient.urgencyLevel, request.slaBreachedAt);
                     const isEmergency = request.isEmergency || request.patient.urgencyLevel === 'critical';
 

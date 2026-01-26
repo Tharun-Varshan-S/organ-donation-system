@@ -35,7 +35,8 @@ const Donors = () => {
         dob: '', gender: 'male',
         bloodType: 'A+', weight: '', height: '',
         address: '', city: '', state: '', zipCode: '',
-        organTypes: [], isLivingDonor: false
+        organTypes: [], isLivingDonor: false,
+        photoUrl: '', govtId: '', isVerified: false
     });
 
     const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -98,7 +99,9 @@ const Donors = () => {
                     email: formData.email,
                     phone: formData.phone,
                     dateOfBirth: formData.dob,
-                    gender: formData.gender
+                    gender: formData.gender,
+                    photoUrl: formData.photoUrl,
+                    govtId: formData.govtId
                 },
                 medicalInfo: {
                     bloodType: formData.bloodType,
@@ -114,7 +117,8 @@ const Donors = () => {
                     city: formData.city,
                     state: formData.state,
                     zipCode: formData.zipCode
-                }
+                },
+                isVerified: formData.isVerified
             };
 
             const url = currentDonor
@@ -162,7 +166,10 @@ const Donors = () => {
             state: donor.location.state || '',
             zipCode: donor.location.zipCode || '',
             organTypes: donor.donationPreferences.organTypes || [],
-            isLivingDonor: donor.donationPreferences.isLivingDonor
+            isLivingDonor: donor.donationPreferences.isLivingDonor,
+            photoUrl: donor.personalInfo.photoUrl || '',
+            govtId: donor.personalInfo.govtId || '',
+            isVerified: donor.isVerified || false
         });
         setShowModal(true);
     };
@@ -174,7 +181,8 @@ const Donors = () => {
             dob: '', gender: 'male',
             bloodType: 'A+', weight: '', height: '',
             address: '', city: '', state: '', zipCode: '',
-            organTypes: [], isLivingDonor: false
+            organTypes: [], isLivingDonor: false,
+            photoUrl: '', govtId: '', isVerified: false
         });
     };
 
@@ -384,6 +392,35 @@ const Donors = () => {
                                         ))}
                                     </div>
                                 </div>
+                            </div>
+
+                            <div className="form-section">
+                                <h3>Verification & Documentation</h3>
+                                <input
+                                    name="photoUrl"
+                                    type="url"
+                                    placeholder="Photo URL"
+                                    value={formData.photoUrl}
+                                    onChange={handleInputChange}
+                                    className="full-width"
+                                />
+                                <input
+                                    name="govtId"
+                                    type="text"
+                                    placeholder="Government ID Number"
+                                    value={formData.govtId}
+                                    onChange={handleInputChange}
+                                    className="full-width mt-2"
+                                />
+                                <label className="checkbox-label mt-2">
+                                    <input
+                                        type="checkbox"
+                                        name="isVerified"
+                                        checked={formData.isVerified}
+                                        onChange={handleInputChange}
+                                    />
+                                    <span>Medical Verification Complete</span>
+                                </label>
                             </div>
 
                             <div className="modal-footer">

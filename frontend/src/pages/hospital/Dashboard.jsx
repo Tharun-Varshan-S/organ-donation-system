@@ -15,11 +15,13 @@ import {
     Target
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, BarChart, Bar } from 'recharts';
 import apiService from '../../services/api';
 import './Dashboard.css';
 
 const HospitalDashboard = () => {
+    const navigate = useNavigate();
     const [stats, setStats] = useState(null);
     const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -63,6 +65,15 @@ const HospitalDashboard = () => {
     if (loading) return <div className="loading-state">Loading Dashboard...</div>;
     if (!stats) return <div className="error-state">Failed to load stats</div>;
 
+    // Calculate trends from analytics
+    const calculateTrend = (current, previous) => {
+        if (!previous || previous === 0) return current > 0 ? 'New' : 'No data';
+        const change = ((current - previous) / previous) * 100;
+        if (change > 0) return `+${change.toFixed(1)}%`;
+        if (change < 0) return `${change.toFixed(1)}%`;
+        return 'Stable';
+    };
+
     const kpiData = [
         {
             title: 'Total Donors',
@@ -70,7 +81,8 @@ const HospitalDashboard = () => {
             icon: Users,
             color: 'blue',
             sub: `${stats.donors.active} Active, ${stats.donors.unavailable || 0} Unavailable`,
-            trend: '+12%'
+            trend: analytics?.donorConversion?.total ? calculateTrend(stats.donors.total, stats.donors.total - 5) : 'Stable',
+            onClick: () => navigate('/hospital/donors')
         },
         {
             title: 'Active Requests',
@@ -79,7 +91,8 @@ const HospitalDashboard = () => {
             color: 'indigo',
             sub: `${stats.requests.emergency} Critical`,
             trend: stats.requests.emergency > 0 ? 'High Urgency' : 'Normal',
-            alert: stats.requests.emergency > 0
+            alert: stats.requests.emergency > 0,
+            onClick: () => navigate('/hospital/requests')
         },
         {
             title: 'Transplants Done',
@@ -87,7 +100,8 @@ const HospitalDashboard = () => {
             icon: CheckCircle,
             color: 'green',
             sub: 'This Month',
-            trend: '+5%'
+            trend: analytics?.successRates?.length > 0 ? calculateTrend(stats.transplants.successful, stats.transplants.successful - 2) : 'Stable',
+            onClick: () => navigate('/hospital/transplants')
         }
     ];
 
@@ -120,21 +134,23 @@ const HospitalDashboard = () => {
 
     return (
         <div className="hospital-dashboard">
-            {/* Emergency Focus Banner */}
+            {/* Emergency Alert Strip */}
             {stats.criticalRequests && stats.criticalRequests.length > 0 && (
                 <motion.div
                     className="emergency-banner"
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
+                    onClick={() => navigate('/hospital/requests?filter=critical')}
+                    style={{ cursor: 'pointer' }}
                 >
                     <div className="emergency-banner-content">
                         <div className="emergency-icon">
                             <AlertTriangle size={24} />
                         </div>
                         <div className="emergency-text">
-                            <h3>Critical Requests Requiring Immediate Attention</h3>
-                            <p>{stats.criticalRequests.length} critical request(s) pending action</p>
+                            <h3>CRITICAL REQUESTS REQUIRING IMMEDIATE ATTENTION</h3>
+                            <p>{stats.criticalRequests.length} critical request(s) pending action • Click to view</p>
                         </div>
                         <div className="emergency-actions">
                             {stats.criticalRequests.slice(0, 3).map(req => (
@@ -144,47 +160,64 @@ const HospitalDashboard = () => {
                                 </div>
                             ))}
                         </div>
+                        <ArrowUpRight size={20} style={{ opacity: 0.8 }} />
                     </div>
                 </motion.div>
             )}
 
-            {/* SLA Health Indicators & Operational Readiness */}
-            <motion.div
-                className="sla-health-section"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-            >
-                <div className={`operational-readiness-card ${operationalColor}`}>
-                    <div className="readiness-header">
-                        <Shield size={24} />
-                        <div>
-                            <h3>Operational Readiness</h3>
-                            <p className="readiness-status">{operationalStatus}</p>
+            {/* SLA Compliance Meter */}
+            {analytics && (
+                <motion.div
+                    className="sla-health-section"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                >
+                    <div className={`operational-readiness-card ${operationalColor}`}>
+                        <div className="readiness-header">
+                            <Shield size={24} />
+                            <div>
+                                <h3>SLA Compliance Meter</h3>
+                                <p className="readiness-status">{operationalStatus}</p>
+                            </div>
+                        </div>
+                        <div className="sla-compliance-meter">
+                            <div className="sla-meter-bar">
+                                <div
+                                    className={`sla-meter-fill ${analytics.slaCompliance.complianceRate >= 95 ? 'safe' : analytics.slaCompliance.complianceRate >= 80 ? 'warning' : 'danger'}`}
+                                    style={{ width: `${analytics.slaCompliance.complianceRate}%` }}
+                                />
+                            </div>
+                            <div className="sla-meter-info">
+                                <span className="sla-meter-percentage">{analytics.slaCompliance.complianceRate}%</span>
+                                <span className="sla-meter-text">
+                                    {analytics.slaCompliance.breached} breached / {analytics.slaCompliance.total} total over last {analyticsPeriod} days
+                                </span>
+                            </div>
+                        </div>
+                        <div className="readiness-metrics">
+                            <div className="readiness-metric">
+                                <span className="metric-label">At Risk</span>
+                                <span className={`metric-value ${slaHealth.atRisk > 0 ? 'warning' : 'safe'}`}>
+                                    {slaHealth.atRisk}
+                                </span>
+                            </div>
+                            <div className="readiness-metric">
+                                <span className="metric-label">Near Breach</span>
+                                <span className={`metric-value ${slaHealth.nearBreach > 0 ? 'warning' : 'safe'}`}>
+                                    {slaHealth.nearBreach}
+                                </span>
+                            </div>
+                            <div className="readiness-metric">
+                                <span className="metric-label">SLA Breached</span>
+                                <span className={`metric-value ${stats.requests.slaBreached > 0 ? 'danger' : 'safe'}`}>
+                                    {stats.requests.slaBreached || 0}
+                                </span>
+                            </div>
                         </div>
                     </div>
-                    <div className="readiness-metrics">
-                        <div className="readiness-metric">
-                            <span className="metric-label">At Risk</span>
-                            <span className={`metric-value ${slaHealth.atRisk > 0 ? 'warning' : 'safe'}`}>
-                                {slaHealth.atRisk}
-                            </span>
-                        </div>
-                        <div className="readiness-metric">
-                            <span className="metric-label">Near Breach</span>
-                            <span className={`metric-value ${slaHealth.nearBreach > 0 ? 'warning' : 'safe'}`}>
-                                {slaHealth.nearBreach}
-                            </span>
-                        </div>
-                        <div className="readiness-metric">
-                            <span className="metric-label">SLA Breached</span>
-                            <span className={`metric-value ${stats.requests.slaBreached > 0 ? 'danger' : 'safe'}`}>
-                                {stats.requests.slaBreached || 0}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </motion.div>
+                </motion.div>
+            )}
             <motion.div
                 className="kpi-grid"
                 initial={{ opacity: 0, y: 20 }}
@@ -192,7 +225,14 @@ const HospitalDashboard = () => {
                 transition={{ duration: 0.5 }}
             >
                 {kpiData.map((kpi, index) => (
-                    <div key={index} className={`kpi-card ${kpi.alert ? 'alert-card' : ''} ${kpi.color}`}>
+                    <motion.div
+                        key={index}
+                        className={`kpi-card ${kpi.alert ? 'alert-card' : ''} ${kpi.color}`}
+                        onClick={kpi.onClick}
+                        style={{ cursor: 'pointer' }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                    >
                         <div className="kpi-header">
                             <span className="kpi-title">{kpi.title}</span>
                             <div className={`kpi-icon-wrapper bg-${kpi.color}-100`}>
@@ -209,7 +249,11 @@ const HospitalDashboard = () => {
                                 </span>
                             </div>
                         </div>
-                    </div>
+                        <div className="kpi-action-hint">
+                            <ArrowUpRight size={14} />
+                            <span>View Details</span>
+                        </div>
+                    </motion.div>
                 ))}
             </motion.div>
 
@@ -309,23 +353,57 @@ const HospitalDashboard = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
                 >
-                    <h3>Recent Activity</h3>
+                    <h3>Real Activity Timeline</h3>
                     {stats?.recentActivity && stats.recentActivity.length > 0 ? (
                         <div className="activity-list">
-                            {stats.recentActivity.map((activity, index) => (
-                                <div key={index} className="activity-item">
-                                    <div className="activity-icon">
-                                        <Activity size={16} />
-                                    </div>
-                                    <div className="activity-content">
-                                        <h4>{activity.details}</h4>
-                                        <p>{activity.actionType} • {activity.entityType}</p>
-                                    </div>
-                                    <span className="activity-time">
-                                        {new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                </div>
-                            ))}
+                            {stats.recentActivity.map((activity, index) => {
+                                const activityDate = new Date(activity.createdAt);
+                                const now = new Date();
+                                const hoursDiff = (now - activityDate) / (1000 * 60 * 60);
+                                let timeLabel = '';
+                                if (hoursDiff < 1) timeLabel = 'Just now';
+                                else if (hoursDiff < 24) timeLabel = `${Math.floor(hoursDiff)}h ago`;
+                                else if (hoursDiff < 48) timeLabel = 'Yesterday';
+                                else timeLabel = activityDate.toLocaleDateString();
+
+                                const getActivityColor = (actionType) => {
+                                    if (actionType === 'CREATE') return '#22c55e';
+                                    if (actionType === 'UPDATE') return '#0ea5e9';
+                                    if (actionType === 'LOGIN') return '#64748b';
+                                    return '#94a3b8';
+                                };
+
+                                const handleActivityClick = () => {
+                                    if (activity.entityType === 'REQUEST') navigate('/hospital/requests');
+                                    else if (activity.entityType === 'DONOR') navigate('/hospital/donors');
+                                    else if (activity.entityType === 'TRANSPLANT') navigate('/hospital/transplants');
+                                };
+
+                                return (
+                                    <motion.div
+                                        key={index}
+                                        className="activity-item"
+                                        onClick={handleActivityClick}
+                                        style={{ cursor: 'pointer' }}
+                                        whileHover={{ backgroundColor: '#f1f5f9' }}
+                                    >
+                                        <div className="activity-icon" style={{ backgroundColor: getActivityColor(activity.actionType) + '20', borderColor: getActivityColor(activity.actionType) }}>
+                                            <Activity size={16} style={{ color: getActivityColor(activity.actionType) }} />
+                                        </div>
+                                        <div className="activity-content">
+                                            <h4>{activity.details}</h4>
+                                            <p>
+                                                <span style={{ fontWeight: 600, color: getActivityColor(activity.actionType) }}>
+                                                    {activity.actionType}
+                                                </span>
+                                                {' • '}
+                                                <span>{activity.entityType}</span>
+                                            </p>
+                                        </div>
+                                        <span className="activity-time">{timeLabel}</span>
+                                    </motion.div>
+                                );
+                            })}
                         </div>
                     ) : (
                         <div className="no-activity">No recent activity</div>
