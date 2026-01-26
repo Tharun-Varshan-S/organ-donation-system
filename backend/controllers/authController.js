@@ -2,6 +2,8 @@ import jwt from 'jsonwebtoken';
 import Admin from '../models/Admin.js';
 import Hospital from '../models/Hospital.js';
 import User from '../models/User.js';
+import Request from '../models/Request.js';
+import AuditLog from '../models/AuditLog.js';
 
 // Generate JWT Token
 const generateToken = (id, role) => {
@@ -367,15 +369,61 @@ export const updateUserProfile = async (req, res) => {
 // @desc    Get user donation history
 // @route   GET /api/users/history
 // @access  Private
-// NOTE: This assumes donations are stored in the user model or a separate Donation model. 
-// For now, checking user.donations array as per likely Schema extension.
 export const getUserHistory = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).populate('donations');
-    // If donations are refs, populate. If embedded objects, just return.
-    // Assuming simple embedded or basic list for now.
     res.status(200).json({ success: true, data: user.donations || [] });
   } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// @desc    Provide Donor Consent for a Match
+// @route   PUT /api/users/consent/:requestId
+// @access  Private (Donor/User)
+export const provideConsent = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { consent } = req.body; // 'given' or 'denied'
+
+    if (!['given', 'denied'].includes(consent)) {
+      return res.status(400).json({ success: false, message: 'Invalid consent value' });
+    }
+
+    const request = await Request.findOne({
+      requestId: requestId,
+      matchedDonor: req.user.id,
+      status: 'matched'
+    });
+
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Matched request not found for this donor' });
+    }
+
+    request.consentStatus = consent;
+    request.lifecycle.push({
+      stage: 'consent_given',
+      timestamp: new Date(),
+      notes: `Donor consent ${consent}`
+    });
+
+    await request.save();
+
+    await AuditLog.create({
+      actionType: 'CONSENT_RECORD',
+      performedBy: { id: req.user.id, name: req.user.name, role: 'User' },
+      entityType: 'REQUEST',
+      entityId: request._id,
+      details: `Consent ${consent} by donor for request ${request.requestId}`
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Consent successfully ${consent}`,
+      data: request
+    });
+  } catch (error) {
+    console.error('Provide Consent Error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };

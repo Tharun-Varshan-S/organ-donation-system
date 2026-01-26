@@ -320,11 +320,11 @@ const getDashboardStats = asyncHandler(async (req, res) => {
 
     // SLA Health Indicators
     Request.aggregate([
-      { 
-        $match: { 
+      {
+        $match: {
           hospital: new mongoose.Types.ObjectId(hospitalId),
           status: { $in: ['pending', 'matched'] }
-        } 
+        }
       },
       {
         $project: {
@@ -509,7 +509,7 @@ const getHospitalRequests = asyncHandler(async (req, res) => {
 // @access  Private (Approved Hospital)
 const createHospitalRequest = asyncHandler(async (req, res) => {
   req.body.hospital = req.hospital.id;
-  
+
   // Set emergency flag and lock if critical
   if (req.body.patient?.urgencyLevel === 'critical') {
     req.body.isEmergency = true;
@@ -822,8 +822,8 @@ const updateTransplantOutcome = asyncHandler(async (req, res) => {
   });
 
   hospital.stats.successfulTransplants = successfulTransplants;
-  hospital.stats.successRate = totalTransplants > 0 
-    ? Math.round((successfulTransplants / totalTransplants) * 100) 
+  hospital.stats.successRate = totalTransplants > 0
+    ? Math.round((successfulTransplants / totalTransplants) * 100)
     : 0;
   await hospital.save();
 
@@ -954,9 +954,6 @@ const getHospitalAnalytics = asyncHandler(async (req, res) => {
     }
   ]);
 
-  const sla = slaCompliance[0] || { total: 0, breached: 0, compliant: 0 };
-  const conversion = donorConversion[0] || { total: 0, converted: 0 };
-
   res.status(200).json({
     success: true,
     data: {
@@ -964,8 +961,8 @@ const getHospitalAnalytics = asyncHandler(async (req, res) => {
         total: sla.total,
         breached: sla.breached,
         compliant: sla.compliant,
-        complianceRate: sla.total > 0 
-          ? Math.round(((sla.total - sla.breached) / sla.total) * 100) 
+        complianceRate: sla.total > 0
+          ? Math.round(((sla.total - sla.breached) / sla.total) * 100)
           : 100
       },
       successRates: successRates.map(sr => ({
@@ -983,6 +980,147 @@ const getHospitalAnalytics = asyncHandler(async (req, res) => {
       },
       period: parseInt(period)
     }
+  });
+});
+
+// @desc    Get Anonymized Public Donor Profiles (Discovery)
+// @route   GET /api/hospital/donors/discovery
+// @access  Private (Approved Hospital)
+const getPublicDonors = asyncHandler(async (req, res) => {
+  const { bloodType, organType } = req.query;
+
+  let query = { status: 'active' };
+  if (bloodType) query['medicalInfo.bloodType'] = bloodType;
+  if (organType) query['donationPreferences.organTypes'] = organType;
+
+  const donors = await Donor.find(query)
+    .select('medicalInfo.bloodType donationPreferences.organTypes location.city location.state status createdAt');
+
+  // Also include Users who are donors and have public visibility
+  let userQuery = { isDonor: true, visibilityStatus: 'public', availabilityStatus: 'Active' };
+  if (bloodType) userQuery.bloodType = bloodType;
+  if (organType) userQuery.organ = organType;
+
+  const userDonors = await User.find(userQuery).select('bloodType organ createdAt');
+
+  const formattedUsers = userDonors.map(u => ({
+    _id: u._id,
+    medicalInfo: { bloodType: u.bloodType },
+    donationPreferences: { organTypes: [u.organ] },
+    source: 'user',
+    createdAt: u.createdAt
+  }));
+
+  const formattedDonors = donors.map(d => ({
+    ...d._doc,
+    source: 'donor'
+  }));
+
+  res.status(200).json({
+    success: true,
+    data: [...formattedDonors, ...formattedUsers]
+  });
+});
+
+// @desc    Validate Hospital Eligibility for a Match
+// @route   PUT /api/hospital/requests/:id/validate-eligibility
+// @access  Private (Approved Hospital)
+const validateEligibility = asyncHandler(async (req, res) => {
+  const request = await Request.findOne({
+    _id: req.params.id,
+    hospital: req.hospital.id,
+    status: 'matched'
+  });
+
+  if (!request) {
+    throw new ErrorResponse('Matched request not found', 404);
+  }
+
+  request.eligibilityStatus = 'validated';
+  request.lifecycle.push({
+    stage: 'eligibility_validated',
+    timestamp: new Date(),
+    notes: 'Hospital eligibility validated'
+  });
+
+  await request.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'Eligibility validated successfully',
+    data: request
+  });
+});
+
+// @desc    Get Detailed Donor Profile (Conditional Reveal)
+// @route   GET /api/hospital/donors/:id/profile
+// @access  Private (Approved Hospital)
+const getDonorProfile = asyncHandler(async (req, res) => {
+  const donorId = req.params.id;
+  const hospitalId = req.hospital.id;
+
+  // 1. Check if the hospital is the registering hospital (Full Reveal Always)
+  let donor = await Donor.findById(donorId);
+
+  if (donor && donor.registeredHospital && donor.registeredHospital.toString() === hospitalId.toString()) {
+    return res.status(200).json({ success: true, data: donor, revealed: true });
+  }
+
+  // 2. Check for a confirmed match with Reveal conditions
+  const request = await Request.findOne({
+    matchedDonor: donorId,
+    hospital: hospitalId,
+    status: 'matched'
+  });
+
+  if (request) {
+    const isRevealed = request.eligibilityStatus === 'validated' && request.consentStatus === 'given';
+
+    if (isRevealed) {
+      if (!request.confidentialDataRevealed) {
+        request.confidentialDataRevealed = true;
+        await request.save();
+
+        // Log the first-time reveal access
+        await AuditLog.create({
+          actionType: 'CONFIDENTIAL_DATA_ACCESS',
+          performedBy: { id: hospitalId, name: req.hospital.name, role: 'Hospital' },
+          entityType: 'DONOR',
+          entityId: donorId,
+          details: `Sensitive data revealed for donor under request ${request.requestId}`
+        });
+      }
+
+      const fullDonor = donor || await User.findById(donorId);
+      return res.status(200).json({ success: true, data: fullDonor, revealed: true });
+    }
+  }
+
+  // 3. Otherwise return Anonymized Data
+  if (!donor) {
+    const userDonor = await User.findById(donorId);
+    if (!userDonor) throw new ErrorResponse('Donor not found', 404);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        medicalInfo: { bloodType: userDonor.bloodType },
+        donationPreferences: { organTypes: [userDonor.organ] },
+        status: userDonor.availabilityStatus
+      },
+      revealed: false
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    data: {
+      medicalInfo: { bloodType: donor.medicalInfo.bloodType },
+      donationPreferences: donor.donationPreferences,
+      location: { city: donor.location.city, state: donor.location.state },
+      status: donor.status
+    },
+    revealed: false
   });
 });
 
@@ -1006,5 +1144,8 @@ export {
   captureSLABreach,
   getDonorTimeline,
   updateTransplantOutcome,
-  getHospitalAnalytics
+  getHospitalAnalytics,
+  getPublicDonors,
+  validateEligibility,
+  getDonorProfile
 };

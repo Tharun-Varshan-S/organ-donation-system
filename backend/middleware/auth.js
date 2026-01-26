@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import Admin from '../models/Admin.js';
 import Hospital from '../models/Hospital.js';
+import User from '../models/User.js';
 
 // Protect routes - verify JWT token (Universal)
 const protect = async (req, res, next) => {
@@ -45,6 +46,14 @@ const protect = async (req, res, next) => {
       req.user = hospital;
       req.hospital = hospital;
       req.userType = 'hospital';
+      return next();
+    }
+
+    // Try finding user (Donor)
+    const user = await User.findById(decoded.id).select('-password');
+    if (user) {
+      req.user = user;
+      req.userType = 'user';
       return next();
     }
 

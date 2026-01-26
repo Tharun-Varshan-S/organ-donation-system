@@ -53,9 +53,24 @@ const requestSchema = new mongoose.Schema({
   isEmergency: { type: Boolean, default: false },
   emergencyEscalated: { type: Boolean, default: false },
   escalatedAt: Date,
+  // Enhanced Architecture Fields
+  eligibilityStatus: {
+    type: String,
+    enum: ['pending', 'validated', 'rejected'],
+    default: 'pending'
+  },
+  consentStatus: {
+    type: String,
+    enum: ['pending', 'given', 'denied'],
+    default: 'pending'
+  },
+  confidentialDataRevealed: {
+    type: Boolean,
+    default: false
+  },
   // Lifecycle tracking
   lifecycle: [{
-    stage: { type: String, enum: ['created', 'matched', 'scheduled', 'in_progress', 'completed', 'cancelled'] },
+    stage: { type: String, enum: ['created', 'matched', 'scheduled', 'in_progress', 'completed', 'cancelled', 'eligibility_validated', 'consent_given'] },
     timestamp: { type: Date, default: Date.now },
     notes: String
   }]

@@ -41,14 +41,22 @@ const Donors = () => {
     const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
     const organOptions = ['heart', 'kidney', 'liver', 'lung', 'pancreas', 'cornea'];
 
+    const [discoveryMode, setDiscoveryMode] = useState(false);
+
     useEffect(() => {
+        setDonors([]); // Clear previous
         fetchDonors();
-    }, []);
+    }, [discoveryMode]);
 
     const fetchDonors = async () => {
         try {
+            setLoading(true);
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/api/hospital/donors', {
+            const url = discoveryMode
+                ? 'http://localhost:5000/api/hospital/donors/discovery'
+                : 'http://localhost:5000/api/hospital/donors';
+
+            const response = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
@@ -182,11 +190,11 @@ const Donors = () => {
 
     const isEmergencyEligible = (donor) => {
         // Emergency eligible if: active status, has critical organs (heart, liver, lung), and verified
-        return donor.status === 'active' && 
-               donor.isVerified &&
-               donor.donationPreferences?.organTypes?.some(organ => 
-                   ['heart', 'liver', 'lung'].includes(organ)
-               );
+        return donor.status === 'active' &&
+            donor.isVerified &&
+            donor.donationPreferences?.organTypes?.some(organ =>
+                ['heart', 'liver', 'lung'].includes(organ)
+            );
     };
 
     const fetchDonorTimeline = async (donorId) => {
@@ -247,10 +255,20 @@ const Donors = () => {
                         <option value="matched">Matched</option>
                     </select>
                 </div>
-                <button className="primary-btn" onClick={() => { resetForm(); setShowModal(true); }}>
-                    <Plus size={20} />
-                    Add Donor
+                <button
+                    className={`secondary-btn ${discoveryMode ? 'active' : ''}`}
+                    onClick={() => setDiscoveryMode(!discoveryMode)}
+                    style={{ marginRight: '10px', backgroundColor: discoveryMode ? '#e0f2fe' : 'transparent' }}
+                >
+                    <Search size={20} />
+                    {discoveryMode ? 'Show My Donors' : 'Find Public Donors'}
                 </button>
+                {!discoveryMode && (
+                    <button className="primary-btn" onClick={() => { resetForm(); setShowModal(true); }}>
+                        <Plus size={20} />
+                        Add Donor
+                    </button>
+                )}
             </div>
 
             <div className="donors-grid">
@@ -292,8 +310,8 @@ const Donors = () => {
                             </div>
 
                             <div className="donor-card-footer">
-                                <button 
-                                    className="icon-btn timeline-btn" 
+                                <button
+                                    className="icon-btn timeline-btn"
                                     onClick={() => fetchDonorTimeline(donor._id)}
                                     title="View Timeline"
                                 >

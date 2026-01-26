@@ -73,16 +73,16 @@ const Requests = () => {
         const percentage = Math.max(0, Math.min(100, (remaining / limit) * 100));
 
         if (slaBreachedAt || remaining < 0) {
-            return { 
-                text: 'Breached', 
-                color: 'red', 
+            return {
+                text: 'Breached',
+                color: 'red',
                 percentage: 0,
                 isBreached: true
             };
         }
-        
-        return { 
-            text: `${Math.round(remaining)}h remaining`, 
+
+        return {
+            text: `${Math.round(remaining)}h remaining`,
             color: remaining < (limit * 0.2) ? 'red' : remaining < (limit * 0.5) ? 'orange' : 'green',
             percentage,
             isBreached: false
@@ -113,6 +113,45 @@ const Requests = () => {
             }
         } catch (error) {
             console.error('Error capturing delay reason:', error);
+        }
+    };
+
+    const handleValidateEligibility = async (requestId) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`http://localhost:5000/api/hospital/requests/${requestId}/validate-eligibility`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                alert('Eligibility Validated!');
+                fetchRequests();
+            } else {
+                alert(data.message);
+            }
+        } catch (error) {
+            console.error('Error validating eligibility:', error);
+        }
+    };
+
+    const handleRevealDonor = async (donorId) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`http://localhost:5000/api/hospital/donors/${donorId}/profile`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                // Show donor details in a modal or alert for now
+                if (data.revealed) {
+                    alert(`Donor Revealed:\nName: ${data.data.personalInfo?.firstName || data.data.name}\nPhone: ${data.data.personalInfo?.phone || data.data.phone}`);
+                } else {
+                    alert('Donor profile is restricted. Confidential data not revealed.');
+                }
+            }
+        } catch (error) {
+            console.error('Error revealing donor:', error);
         }
     };
 
@@ -252,7 +291,7 @@ const Requests = () => {
                                     <span className="sla-text">{sla.text}</span>
                                 </div>
                                 <div className="sla-progress-bar">
-                                    <div 
+                                    <div
                                         className={`sla-progress-fill ${sla.color}`}
                                         style={{ width: `${sla.percentage}%` }}
                                     />
@@ -284,6 +323,39 @@ const Requests = () => {
                                     {request.status === 'matched' && <CheckCircle2 size={14} />}
                                     {request.status}
                                 </span>
+
+                                {request.status === 'matched' && (
+                                    <div className="action-buttons">
+                                        {request.eligibilityStatus !== 'validated' && (
+                                            <button
+                                                className="action-btn validate-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleValidateEligibility(request._id);
+                                                }}
+                                            >
+                                                Validate Eligibility
+                                            </button>
+                                        )}
+
+                                        {request.eligibilityStatus === 'validated' && request.consentStatus === 'given' && (
+                                            <button
+                                                className="action-btn reveal-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleRevealDonor(request.matchedDonor);
+                                                }}
+                                            >
+                                                Reveal Donor
+                                            </button>
+                                        )}
+
+                                        {request.eligibilityStatus === 'validated' && request.consentStatus !== 'given' && (
+                                            <span className="waiting-text">Waiting for Consent...</span>
+                                        )}
+                                    </div>
+                                )}
+
                                 <span className="req-id">#{request.requestId?.slice(-6) || '---'}</span>
                             </div>
                         </motion.div>

@@ -4,7 +4,7 @@ const auditLogSchema = new mongoose.Schema({
     actionType: {
         type: String,
         required: true,
-        enum: ['CREATE', 'UPDATE', 'DELETE', 'APPROVE', 'REJECT', 'SUSPEND', 'LOGIN', 'LOGOUT']
+        enum: ['CREATE', 'UPDATE', 'DELETE', 'APPROVE', 'REJECT', 'SUSPEND', 'LOGIN', 'LOGOUT', 'CONFIDENTIAL_DATA_ACCESS', 'CONSENT_RECORD']
     },
     performedBy: {
         id: {
@@ -14,7 +14,7 @@ const auditLogSchema = new mongoose.Schema({
         name: String,
         role: {
             type: String,
-            enum: ['Admin', 'Hospital'],
+            enum: ['Admin', 'Hospital', 'User'],
             default: 'Admin'
         }
     },

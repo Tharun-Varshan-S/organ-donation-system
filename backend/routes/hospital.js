@@ -17,7 +17,10 @@ import {
   captureSLABreach,
   getDonorTimeline,
   updateTransplantOutcome,
-  getHospitalAnalytics
+  getHospitalAnalytics,
+  getPublicDonors,
+  validateEligibility,
+  getDonorProfile
 } from '../controllers/hospitalController.js';
 import {
   hospitalRegister,
@@ -55,6 +58,9 @@ router.route('/donors')
   .get(protectHospital, hospitalOnly, ensureApproved, getHospitalDonors)
   .post(protectHospital, hospitalOnly, ensureApproved, createHospitalDonor);
 
+router.get('/donors/discovery', protectHospital, hospitalOnly, ensureApproved, getPublicDonors);
+router.get('/donors/:id/profile', protectHospital, hospitalOnly, ensureApproved, getDonorProfile);
+
 router.put('/donors/:id', protectHospital, hospitalOnly, ensureApproved, updateHospitalDonor);
 
 // @route   GET / POST /api/hospital/requests
@@ -69,6 +75,7 @@ router.put('/transplants/:id/outcome', protectHospital, hospitalOnly, ensureAppr
 
 // @route   PUT /api/hospital/requests/:id/sla-breach
 router.put('/requests/:id/sla-breach', protectHospital, hospitalOnly, ensureApproved, captureSLABreach);
+router.put('/requests/:id/validate-eligibility', protectHospital, hospitalOnly, ensureApproved, validateEligibility);
 
 // @route   GET /api/hospital/donors/:id/timeline
 router.get('/donors/:id/timeline', protectHospital, hospitalOnly, ensureApproved, getDonorTimeline);
