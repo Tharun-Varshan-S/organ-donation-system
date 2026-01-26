@@ -17,7 +17,9 @@ import './App.css';
 import HospitalLayout from './components/HospitalLayout';
 import PendingApproval from './pages/hospital/PendingApproval';
 import HospitalInternalDashboard from './pages/hospital/Dashboard';
+import HospitalPatients from './pages/hospital/Patients';
 import HospitalDonors from './pages/hospital/Donors';
+import HospitalDoctors from './pages/hospital/Doctors';
 import HospitalRequests from './pages/hospital/Requests';
 import HospitalTransplants from './pages/hospital/Transplants';
 import HospitalProfile from './pages/hospital/Profile';
@@ -54,7 +56,9 @@ function App() {
             <Route path="/hospital" element={<HospitalLayout />}>
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<HospitalInternalDashboard />} />
+              <Route path="patients" element={<HospitalPatients />} />
               <Route path="donors" element={<HospitalDonors />} />
+              <Route path="doctors" element={<HospitalDoctors />} />
               <Route path="requests" element={<HospitalRequests />} />
               <Route path="transplants" element={<HospitalTransplants />} />
               <Route path="profile" element={<HospitalProfile />} />

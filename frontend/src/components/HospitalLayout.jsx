@@ -15,7 +15,8 @@ import {
     Info,
     Shield,
     Zap,
-    CheckCircle
+    CheckCircle,
+    User
 } from 'lucide-react';
 import apiService from '../services/api';
 import { motion } from 'framer-motion';
@@ -158,9 +159,11 @@ const HospitalLayout = () => {
 
     const navItems = [
         { name: 'Dashboard', path: '/hospital/dashboard', icon: LayoutDashboard },
+        { name: 'Patient Registry', path: '/hospital/patients', icon: User },
         { name: 'Donor Management', path: '/hospital/donors', icon: Users },
-        { name: 'Organ Requests', path: '/hospital/requests', icon: Activity }, // Activity or HeartPulse
-        { name: 'Transplants', path: '/hospital/transplants', icon: Stethoscope },
+        { name: 'Doctor Management', path: '/hospital/doctors', icon: Stethoscope },
+        { name: 'Organ Requests', path: '/hospital/requests', icon: Activity },
+        { name: 'Transplants', path: '/hospital/transplants', icon: FileText },
         { name: 'Profile & Settings', path: '/hospital/profile', icon: Settings },
     ];
 

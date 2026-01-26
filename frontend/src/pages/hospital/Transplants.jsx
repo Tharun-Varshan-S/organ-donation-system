@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle, Clock, Activity, ArrowRight, FileText, TrendingUp, AlertCircle, Plus } from 'lucide-react';
+import { CheckCircle, Clock, Activity, ArrowRight, FileText, TrendingUp, AlertCircle, Plus, Calendar, User, MapPin, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
 import './Transplants.css';
 
@@ -15,11 +15,40 @@ const Transplants = () => {
         followUpRequired: true
     });
     const [successMetrics, setSuccessMetrics] = useState(null);
+    const [showPrepModal, setShowPrepModal] = useState(false);
+    const [prepFormData, setPrepFormData] = useState({
+        scheduledDate: '',
+        surgeonName: '',
+        operatingRoom: ''
+    });
+    const [doctors, setDoctors] = useState([]);
 
     useEffect(() => {
         fetchTransplants();
         fetchSuccessMetrics();
+        fetchDoctors();
     }, []);
+
+    const fetchDoctors = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('http://localhost:5000/api/hospital/transplants', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                const doctorSet = new Set();
+                data.data.forEach(tx => {
+                    if (tx.surgeryDetails?.surgeonName) {
+                        doctorSet.add(tx.surgeryDetails.surgeonName);
+                    }
+                });
+                setDoctors(Array.from(doctorSet));
+            }
+        } catch (error) {
+            console.error('Error fetching doctors:', error);
+        }
+    };
 
     const fetchSuccessMetrics = async () => {
         try {
@@ -68,6 +97,47 @@ const Transplants = () => {
             fetchSuccessMetrics();
         } catch (error) {
             console.error('Error updating status:', error);
+        }
+    };
+
+    const openPrepModal = (transplant) => {
+        setSelectedTransplant(transplant);
+        setPrepFormData({
+            scheduledDate: transplant.surgeryDetails?.scheduledDate ? new Date(transplant.surgeryDetails.scheduledDate).toISOString().slice(0, 16) : '',
+            surgeonName: transplant.surgeryDetails?.surgeonName || '',
+            operatingRoom: transplant.surgeryDetails?.operatingRoom || ''
+        });
+        setShowPrepModal(true);
+    };
+
+    const handlePrepSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`http://localhost:5000/api/hospital/transplants/${selectedTransplant._id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    surgeryDetails: {
+                        scheduledDate: prepFormData.scheduledDate,
+                        surgeonName: prepFormData.surgeonName,
+                        operatingRoom: prepFormData.operatingRoom
+                    }
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                fetchTransplants();
+                fetchDoctors();
+                setShowPrepModal(false);
+                setSelectedTransplant(null);
+            }
+        } catch (error) {
+            console.error('Error updating preparation:', error);
         }
     };
 
@@ -182,6 +252,38 @@ const Transplants = () => {
                                     );
                                 })}
                             </div>
+
+                            {tx.status === 'scheduled' && !tx.surgeryDetails?.surgeonName && (
+                                <button
+                                    className="prepare-ot-btn"
+                                    onClick={() => openPrepModal(tx)}
+                                >
+                                    <Calendar size={14} />
+                                    Prepare OT
+                                </button>
+                            )}
+
+                            {tx.surgeryDetails?.surgeonName && (
+                                <div className="surgery-assignment">
+                                    <div className="assignment-item">
+                                        <User size={14} />
+                                        <span>{tx.surgeryDetails.surgeonName}</span>
+                                    </div>
+                                    {tx.surgeryDetails.operatingRoom && (
+                                        <div className="assignment-item">
+                                            <MapPin size={14} />
+                                            <span>OT {tx.surgeryDetails.operatingRoom}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {tx.status === 'completed' && tx.outcome?.success === true && (
+                                <div className="ops-done-badge">
+                                    <Award size={16} />
+                                    <span>OPS DONE</span>
+                                </div>
+                            )}
 
                             {tx.status === 'completed' && (
                                 <div className="tx-outcome-section">
@@ -325,6 +427,90 @@ const Transplants = () => {
                                 </button>
                                 <button type="submit" className="submit-btn" disabled={outcomeData.success === null}>
                                     Save Outcome
+                                </button>
+                            </div>
+                        </form>
+                    </motion.div>
+                </div>
+            )}
+
+            {/* Preparation Form Modal */}
+            {showPrepModal && selectedTransplant && (
+                <div className="modal-overlay" onClick={() => setShowPrepModal(false)}>
+                    <motion.div
+                        className="modal-content"
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="modal-header">
+                            <h2>Transplant Preparation</h2>
+                            <button onClick={() => setShowPrepModal(false)}>
+                                <Plus size={24} style={{ transform: 'rotate(45deg)' }} />
+                            </button>
+                        </div>
+                        <form onSubmit={handlePrepSubmit}>
+                            <div className="form-section">
+                                <h3>Transplant Details</h3>
+                                <p><strong>ID:</strong> {selectedTransplant.transplantId}</p>
+                                <p><strong>Organ:</strong> {selectedTransplant.organType}</p>
+                                <p><strong>Recipient:</strong> {selectedTransplant.request?.patient?.name || selectedTransplant.recipient?.name || 'N/A'}</p>
+                            </div>
+
+                            <div className="form-section">
+                                <h3>Surgery Scheduling</h3>
+                                <label>
+                                    <Calendar size={16} />
+                                    Scheduled Date & Time *
+                                </label>
+                                <input
+                                    type="datetime-local"
+                                    className="full-width mt-2"
+                                    value={prepFormData.scheduledDate}
+                                    onChange={(e) => setPrepFormData({ ...prepFormData, scheduledDate: e.target.value })}
+                                    required
+                                />
+                            </div>
+
+                            <div className="form-section">
+                                <h3>Doctor & OT Assignment</h3>
+                                <label>
+                                    <User size={16} />
+                                    Surgeon Name *
+                                </label>
+                                <input
+                                    type="text"
+                                    className="full-width mt-2"
+                                    placeholder="Enter surgeon name"
+                                    value={prepFormData.surgeonName}
+                                    onChange={(e) => setPrepFormData({ ...prepFormData, surgeonName: e.target.value })}
+                                    list="doctors-list"
+                                    required
+                                />
+                                <datalist id="doctors-list">
+                                    {doctors.map((doc, idx) => (
+                                        <option key={idx} value={doc} />
+                                    ))}
+                                </datalist>
+                                <label className="mt-2">
+                                    <MapPin size={16} />
+                                    Operating Room
+                                </label>
+                                <input
+                                    type="text"
+                                    className="full-width mt-2"
+                                    placeholder="e.g., OT-1, OT-2"
+                                    value={prepFormData.operatingRoom}
+                                    onChange={(e) => setPrepFormData({ ...prepFormData, operatingRoom: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="modal-footer">
+                                <button type="button" className="cancel-btn" onClick={() => setShowPrepModal(false)}>
+                                    Cancel
+                                </button>
+                                <button type="submit" className="submit-btn">
+                                    Save Preparation
                                 </button>
                             </div>
                         </form>
