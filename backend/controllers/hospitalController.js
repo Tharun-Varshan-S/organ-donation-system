@@ -4,6 +4,7 @@ import Hospital from '../models/Hospital.js';
 import Donor from '../models/Donor.js';
 import Request from '../models/Request.js';
 import Transplant from '../models/Transplant.js';
+import Doctor from '../models/Doctor.js';
 import AuditLog from '../models/AuditLog.js';
 import Notification from '../models/Notification.js';
 import { ErrorResponse, asyncHandler } from '../middleware/error.js';
@@ -1124,6 +1125,100 @@ const getDonorProfile = asyncHandler(async (req, res) => {
   });
 });
 
+
+
+// @desc    Get all doctors for a hospital
+// @route   GET /api/hospital/doctors
+// @access  Private (Hospital)
+const getDoctors = asyncHandler(async (req, res) => {
+  const doctors = await Doctor.find({ hospital: req.hospital.id, active: true });
+
+  res.status(200).json({
+    success: true,
+    count: doctors.length,
+    data: doctors
+  });
+});
+
+// @desc    Add a new doctor
+// @route   POST /api/hospital/doctors
+// @access  Private (Hospital)
+const addDoctor = asyncHandler(async (req, res) => {
+  req.body.hospital = req.hospital.id;
+
+  const doctor = await Doctor.create(req.body);
+
+  await AuditLog.create({
+    actionType: 'CREATE',
+    performedBy: { id: req.hospital.id, name: req.hospital.name, role: 'Hospital' },
+    entityType: 'DOCTOR',
+    entityId: doctor._id,
+    details: `Added new doctor: ${doctor.name}`
+  });
+
+  res.status(201).json({
+    success: true,
+    data: doctor
+  });
+});
+
+// @desc    Update doctor profile
+// @route   PUT /api/hospital/doctors/:id
+// @access  Private (Hospital)
+const updateDoctor = asyncHandler(async (req, res) => {
+  let doctor = await Doctor.findOne({ _id: req.params.id, hospital: req.hospital.id });
+
+  if (!doctor) {
+    throw new ErrorResponse('Doctor not found', 404);
+  }
+
+  doctor = await Doctor.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+    runValidators: true
+  });
+
+  await AuditLog.create({
+    actionType: 'UPDATE',
+    performedBy: { id: req.hospital.id, name: req.hospital.name, role: 'Hospital' },
+    entityType: 'DOCTOR',
+    entityId: doctor._id,
+    details: `Updated doctor profile: ${doctor.name}`
+  });
+
+  res.status(200).json({
+    success: true,
+    data: doctor
+  });
+});
+
+// @desc    Remove (Deactivate) doctor
+// @route   DELETE /api/hospital/doctors/:id
+// @access  Private (Hospital)
+const removeDoctor = asyncHandler(async (req, res) => {
+  const doctor = await Doctor.findOne({ _id: req.params.id, hospital: req.hospital.id });
+
+  if (!doctor) {
+    throw new ErrorResponse('Doctor not found', 404);
+  }
+
+  // Soft delete
+  doctor.active = false;
+  await doctor.save();
+
+  await AuditLog.create({
+    actionType: 'DELETE',
+    performedBy: { id: req.hospital.id, name: req.hospital.name, role: 'Hospital' },
+    entityType: 'DOCTOR',
+    entityId: doctor._id,
+    details: `Deactivated doctor record: ${doctor.name}`
+  });
+
+  res.status(200).json({
+    success: true,
+    message: 'Doctor record deactivated'
+  });
+});
+
 export {
   hospitalRegister,
   hospitalLogin,
@@ -1147,5 +1242,9 @@ export {
   getHospitalAnalytics,
   getPublicDonors,
   validateEligibility,
-  getDonorProfile
+  getDonorProfile,
+  getDoctors,
+  addDoctor,
+  updateDoctor,
+  removeDoctor
 };

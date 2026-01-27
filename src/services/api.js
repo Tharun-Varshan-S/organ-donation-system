@@ -80,6 +80,22 @@ class ApiService {
     }
 
     // Hospital Authentication
+    async hospitalLogin(email, password) {
+        const response = await fetch(`${API_BASE_URL}/hospital/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        })
+
+        const data = await this.handleResponse(response)
+
+        if (data.success && data.token) {
+            this.setHospitalToken(data.token)
+        }
+
+        return data
+    }
+
     async hospitalRegister(formData) {
         const response = await fetch(`${API_BASE_URL}/hospital/register`, {
             method: 'POST',
@@ -87,6 +103,183 @@ class ApiService {
             body: JSON.stringify(formData)
         })
 
+        return this.handleResponse(response)
+    }
+
+    // Hospital Core Features
+    async getHospitalStats() {
+        const response = await fetch(`${API_BASE_URL}/hospital/stats`, {
+            headers: this.getAuthHeaders('hospital')
+        })
+        return this.handleResponse(response)
+    }
+
+    async getHospitalDonors() {
+        const response = await fetch(`${API_BASE_URL}/hospital/donors`, {
+            headers: this.getAuthHeaders('hospital')
+        })
+        return this.handleResponse(response)
+    }
+
+    async createHospitalDonor(donorData) {
+        const response = await fetch(`${API_BASE_URL}/hospital/donors`, {
+            method: 'POST',
+            headers: this.getAuthHeaders('hospital'),
+            body: JSON.stringify(donorData)
+        })
+        return this.handleResponse(response)
+    }
+
+    async updateHospitalDonor(id, donorData) {
+        const response = await fetch(`${API_BASE_URL}/hospital/donors/${id}`, {
+            method: 'PUT',
+            headers: this.getAuthHeaders('hospital'),
+            body: JSON.stringify(donorData)
+        })
+        return this.handleResponse(response)
+    }
+
+    async deleteHospitalDonor(id) {
+        const response = await fetch(`${API_BASE_URL}/hospital/donors/${id}`, {
+            method: 'DELETE',
+            headers: this.getAuthHeaders('hospital')
+        })
+        return this.handleResponse(response)
+    }
+
+    async getHospitalRequests() {
+        const response = await fetch(`${API_BASE_URL}/hospital/requests`, {
+            headers: this.getAuthHeaders('hospital')
+        })
+        return this.handleResponse(response)
+    }
+
+    async createHospitalRequest(requestData) {
+        const response = await fetch(`${API_BASE_URL}/hospital/requests`, {
+            method: 'POST',
+            headers: this.getAuthHeaders('hospital'),
+            body: JSON.stringify(requestData)
+        })
+        return this.handleResponse(response)
+    }
+
+    async getHospitalTransplants() {
+        const response = await fetch(`${API_BASE_URL}/hospital/transplants`, {
+            headers: this.getAuthHeaders('hospital')
+        })
+        return this.handleResponse(response)
+    }
+
+    async updateTransplantStatus(id, updateData) {
+        const response = await fetch(`${API_BASE_URL}/hospital/transplants/${id}`, {
+            method: 'PUT',
+            headers: this.getAuthHeaders('hospital'),
+            body: JSON.stringify(updateData)
+        })
+        return this.handleResponse(response)
+    }
+
+    async updateTransplantOutcome(id, outcomeData) {
+        const response = await fetch(`${API_BASE_URL}/hospital/transplants/${id}/outcome`, {
+            method: 'PUT',
+            headers: this.getAuthHeaders('hospital'),
+            body: JSON.stringify(outcomeData)
+        })
+        return this.handleResponse(response)
+    }
+
+    async getHospitalNotifications() {
+        const response = await fetch(`${API_BASE_URL}/hospital/notifications`, {
+            headers: this.getAuthHeaders('hospital')
+        })
+        return this.handleResponse(response)
+    }
+
+    async markNotificationRead(id) {
+        const response = await fetch(`${API_BASE_URL}/hospital/notifications/${id}/read`, {
+            method: 'PUT',
+            headers: this.getAuthHeaders('hospital')
+        })
+        return this.handleResponse(response)
+    }
+
+    async getHospitalAnalytics(period = '30') {
+        const response = await fetch(`${API_BASE_URL}/hospital/analytics?period=${period}`, {
+            headers: this.getAuthHeaders('hospital')
+        })
+        return this.handleResponse(response)
+    }
+
+    async captureSLABreach(id, delayReason) {
+        const response = await fetch(`${API_BASE_URL}/hospital/requests/${id}/sla-breach`, {
+            method: 'PUT',
+            headers: this.getAuthHeaders('hospital'),
+            body: JSON.stringify({ delayReason })
+        })
+        return this.handleResponse(response)
+    }
+
+    async validateEligibility(id) {
+        const response = await fetch(`${API_BASE_URL}/hospital/requests/${id}/validate-eligibility`, {
+            method: 'PUT',
+            headers: this.getAuthHeaders('hospital')
+        })
+        return this.handleResponse(response)
+    }
+
+    async getDonorProfile(id) {
+        const response = await fetch(`${API_BASE_URL}/hospital/donors/${id}/profile`, {
+            headers: this.getAuthHeaders('hospital')
+        })
+        return this.handleResponse(response)
+    }
+
+    async getDonorTimeline(id) {
+        const response = await fetch(`${API_BASE_URL}/hospital/donors/${id}/timeline`, {
+            headers: this.getAuthHeaders('hospital')
+        })
+        return this.handleResponse(response)
+    }
+
+    async getPublicDonors(filters = {}) {
+        const params = new URLSearchParams(filters);
+        const response = await fetch(`${API_BASE_URL}/hospital/donors/discovery?${params}`, {
+            headers: this.getAuthHeaders('hospital')
+        })
+        return this.handleResponse(response)
+    }
+
+    // Doctor Management
+    async getDoctors() {
+        const response = await fetch(`${API_BASE_URL}/hospital/doctors`, {
+            headers: this.getAuthHeaders('hospital')
+        })
+        return this.handleResponse(response)
+    }
+
+    async addDoctor(doctorData) {
+        const response = await fetch(`${API_BASE_URL}/hospital/doctors`, {
+            method: 'POST',
+            headers: this.getAuthHeaders('hospital'),
+            body: JSON.stringify(doctorData)
+        })
+        return this.handleResponse(response)
+    }
+
+    async updateDoctor(id, doctorData) {
+        const response = await fetch(`${API_BASE_URL}/hospital/doctors/${id}`, {
+            method: 'PUT',
+            headers: this.getAuthHeaders('hospital'),
+            body: JSON.stringify(doctorData)
+        })
+        return this.handleResponse(response)
+    }
+
+    async removeDoctor(id) {
+        const response = await fetch(`${API_BASE_URL}/hospital/doctors/${id}`, {
+            method: 'DELETE',
+            headers: this.getAuthHeaders('hospital')
+        })
         return this.handleResponse(response)
     }
 
@@ -123,7 +316,7 @@ class ApiService {
         return data
     }
 
-    // Dashboard Stats
+    // Dashboard Stats (Admin)
     async getDashboardStats() {
         const response = await fetch(`${API_BASE_URL}/admin/dashboard/stats`, {
             headers: this.getAuthHeaders('admin')
@@ -132,7 +325,7 @@ class ApiService {
         return this.handleResponse(response)
     }
 
-    // Hospital Management
+    // Hospital Management (Admin)
     async getHospitals(page = 1, limit = 10, status = '') {
         const url = new URL(`${API_BASE_URL}/admin/hospitals`);
         url.searchParams.append('page', page);
@@ -165,7 +358,7 @@ class ApiService {
         return this.handleResponse(response)
     }
 
-    // Donors
+    // Donors (Admin)
     async getDonors(page = 1, limit = 10) {
         const response = await fetch(`${API_BASE_URL}/admin/donors?page=${page}&limit=${limit}`, {
             headers: this.getAuthHeaders('admin')
@@ -193,12 +386,12 @@ class ApiService {
 
     async getUserHistory() {
         const response = await fetch(`${API_BASE_URL}/users/history`, {
-            headers: this.getAuthHeaders('user') // OR 'donor' if consistent
+            headers: this.getAuthHeaders('user')
         })
         return this.handleResponse(response)
     }
 
-    // Requests
+    // Requests (Admin)
     async getRequests(page = 1, limit = 10) {
         const response = await fetch(`${API_BASE_URL}/admin/requests?page=${page}&limit=${limit}`, {
             headers: this.getAuthHeaders('admin')
@@ -207,7 +400,7 @@ class ApiService {
         return this.handleResponse(response)
     }
 
-    // Transplants
+    // Transplants (Admin)
     async getTransplants(page = 1, limit = 10) {
         const response = await fetch(`${API_BASE_URL}/admin/transplants?page=${page}&limit=${limit}`, {
             headers: this.getAuthHeaders('admin')
