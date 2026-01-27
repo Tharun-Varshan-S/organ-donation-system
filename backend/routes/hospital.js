@@ -20,7 +20,11 @@ import {
   getHospitalAnalytics,
   getPublicDonors,
   validateEligibility,
-  getDonorProfile
+  getDonorProfile,
+  getDoctors,
+  addDoctor,
+  updateDoctor,
+  removeDoctor
 } from '../controllers/hospitalController.js';
 import {
   hospitalRegister,
@@ -79,6 +83,15 @@ router.put('/requests/:id/validate-eligibility', protectHospital, hospitalOnly, 
 
 // @route   GET /api/hospital/donors/:id/timeline
 router.get('/donors/:id/timeline', protectHospital, hospitalOnly, ensureApproved, getDonorTimeline);
+
+// @route   GET / POST / PUT / DELETE /api/hospital/doctors
+router.route('/doctors')
+  .get(protectHospital, hospitalOnly, ensureApproved, getDoctors)
+  .post(protectHospital, hospitalOnly, ensureApproved, addDoctor);
+
+router.route('/doctors/:id')
+  .put(protectHospital, hospitalOnly, ensureApproved, updateDoctor)
+  .delete(protectHospital, hospitalOnly, ensureApproved, removeDoctor);
 
 // @route   GET /api/hospital/analytics
 router.get('/analytics', protectHospital, hospitalOnly, ensureApproved, getHospitalAnalytics);
