@@ -58,6 +58,37 @@ const userSchema = new mongoose.Schema({
             default: 'Pending'
         }
     }],
+    confidentialData: {
+        pii: {
+            governmentId: String,
+            photograph: String,
+        },
+        contactInfo: {
+            emergencyContact: String,
+            alternateContacts: [String],
+        },
+        detailedMedicalRecords: {
+            pastSurgeries: [String],
+            chronicIllnesses: [String],
+            mentalHealthHistory: [String],
+            geneticDisorders: [String],
+            familyMedicalHistory: [String],
+            currentMedications: [String],
+            allergies: [String],
+        },
+        labReports: {
+            bloodTestReports: [String],
+            hlaTypingReports: [String],
+            crossMatchResults: [String],
+            imagingReports: [String],
+        },
+    },
+    consentRequests: [{
+        hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hospital' },
+        status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
+        requestedAt: { type: Date, default: Date.now },
+        respondedAt: Date,
+    }],
     createdAt: {
         type: Date,
         default: Date.now

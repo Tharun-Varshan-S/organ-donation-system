@@ -140,6 +140,38 @@ class ApiService {
     return this.handleResponse(response)
   }
 
+  async getDonorConfidentialRequests(donorId) {
+    const response = await fetch(`${API_BASE_URL}/users/${donorId}/confidential-requests`, {
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse(response);
+  }
+
+  async respondToConfidentialRequest(requestId, status) {
+    const response = await fetch(`${API_BASE_URL}/users/confidential-requests/${requestId}/respond`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ status }),
+    });
+    return this.handleResponse(response);
+  }
+
+  async updateConfidentialData(confidentialData) {
+    const response = await fetch(`${API_BASE_URL}/users/confidential-data`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ confidentialData })
+    });
+    return this.handleResponse(response);
+  }
+
+  async getConfidentialData() {
+    const response = await fetch(`${API_BASE_URL}/users/confidential-data`, {
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse(response);
+  }
+
   // Dashboard Stats
   async getDashboardStats() {
     const response = await fetch(`${API_BASE_URL}/admin/dashboard/stats`, {

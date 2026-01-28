@@ -231,7 +231,7 @@ export const getPublicHospitalById = async (req, res) => {
 
   } catch (error) {
     console.error('Get hospital details error:', error);
-    res.status(500).json({ success: false, message: 'Error fetching hospital details' });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -426,4 +426,208 @@ export const provideConsent = async (req, res) => {
     console.error('Provide Consent Error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
+};
+
+// @desc    Get donor's confidential data requests
+// @route   GET /api/users/:id/confidential-requests
+// @access  Private (Donor/User)
+export const getDonorConfidentialRequests = async (req, res) => {
+  try {
+    const donorId = req.params.id;
+    if (req.user.id !== donorId) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const donor = await User.findById(donorId).populate('consentRequests.hospitalId', 'name');
+
+    if (!donor) {
+      return res.status(404).json({ success: false, message: 'Donor not found' });
+    }
+
+    const requests = donor.consentRequests.map(req => ({
+      _id: req._id,
+      hospitalId: req.hospitalId._id,
+      hospitalName: req.hospitalId.name,
+      status: req.status,
+      requestedAt: req.requestedAt,
+      respondedAt: req.respondedAt,
+    }));
+
+    res.status(200).json({ success: true, data: requests });
+  } catch (error) {
+    console.error('Get Donor Confidential Requests Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// @desc    Respond to a confidential data request
+// @route   PUT /api/users/confidential-requests/:requestId/respond
+// @access  Private (Donor/User)
+export const respondToConfidentialRequest = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { status } = req.body; // 'accepted' or 'rejected'
+
+    if (!['accepted', 'rejected'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status value' });
+    }
+
+    const donor = await User.findOne({ _id: req.user.id });
+
+    if (!donor) {
+      return res.status(404).json({ success: false, message: 'Donor not found' });
+    }
+
+    const consentRequest = donor.consentRequests.id(requestId);
+
+    if (!consentRequest) {
+      return res.status(404).json({ success: false, message: 'Confidential data request not found' });
+    }
+
+    if (consentRequest.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Request already responded to' });
+    }
+
+    consentRequest.status = status;
+    consentRequest.respondedAt = new Date();
+
+    await donor.save();
+
+    await AuditLog.create({
+      actionType: 'RESPOND_CONFIDENTIAL_DATA_REQUEST',
+      performedBy: { id: req.user.id, name: req.user.name, role: 'User' },
+      entityType: 'CONSENT_REQUEST',
+      entityId: requestId,
+      details: `Donor ${req.user.name} ${status} confidential data request from ${consentRequest.hospitalId}`,
+    });
+
+    // Optional: Notify hospital about the donor's response
+    // This would require a notification model that can target hospitals
+    // For now, we'll rely on the hospital checking the status when they try to access
+
+    res.status(200).json({
+      success: true,
+      message: `Request ${status} successfully`,
+      data: consentRequest,
+    });
+  } catch (error) {
+    console.error('Respond to Confidential Request Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// @desc    Update donor's confidential data
+// @route   PUT /api/users/confidential-data
+// @access  Private (Donor/User)
+export const updateConfidentialData = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Initialize confidentialData if it doesn't exist
+    if (!user.confidentialData) {
+      user.confidentialData = {
+        pii: {},
+        contactInfo: {},
+        detailedMedicalRecords: {},
+        labReports: {}
+      };
+    }
+
+    // Update confidential data fields
+    if (req.body.confidentialData) {
+      const { pii, contactInfo, detailedMedicalRecords, labReports } = req.body.confidentialData;
+
+      if (pii) {
+        user.confidentialData.pii = {
+          ...user.confidentialData.pii,
+          ...pii
+        };
+      }
+
+      if (contactInfo) {
+        user.confidentialData.contactInfo = {
+          ...user.confidentialData.contactInfo,
+          ...contactInfo
+        };
+      }
+
+      if (detailedMedicalRecords) {
+        user.confidentialData.detailedMedicalRecords = {
+          ...user.confidentialData.detailedMedicalRecords,
+          ...detailedMedicalRecords
+        };
+      }
+
+      if (labReports) {
+        user.confidentialData.labReports = {
+          ...user.confidentialData.labReports,
+          ...labReports
+        };
+      }
+    }
+
+    await user.save();
+
+    await AuditLog.create({
+      actionType: 'UPDATE_CONFIDENTIAL_DATA',
+      performedBy: { id: req.user.id, name: req.user.name, role: 'User' },
+      entityType: 'USER',
+      entityId: user._id,
+      details: `User ${req.user.name} updated confidential medical data`,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Confidential data updated successfully',
+      data: user.confidentialData
+    });
+  } catch (error) {
+    console.error('Update Confidential Data Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// @desc    Get donor's confidential data
+// @route   GET /api/users/confidential-data
+// @access  Private (Donor/User)
+export const getConfidentialData = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('confidentialData');
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: user.confidentialData || {}
+    });
+  } catch (error) {
+    console.error('Get Confidential Data Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export {
+  adminRegister,
+  adminLogin,
+  getAdminProfile,
+  hospitalRegister,
+  hospitalLogin,
+  getPublicHospitals,
+  getPublicHospitalById,
+  userRegister,
+  userLogin,
+  getUserProfile,
+  updateUserProfile,
+  getUserHistory,
+  provideConsent,
+  getDonorConfidentialRequests,
+  respondToConfidentialRequest,
+  updateConfidentialData,
+  getConfidentialData
 };

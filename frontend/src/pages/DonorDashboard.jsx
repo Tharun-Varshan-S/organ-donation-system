@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Users, Activity, Settings, BookOpen, Clock, Shield,
-  ChevronDown, ChevronUp, LogOut, User, Phone, Eye, EyeOff, CheckCircle, AlertCircle
+  ChevronDown, ChevronUp, LogOut, User, Phone, Eye, EyeOff, CheckCircle, AlertCircle, Lock
 } from 'lucide-react';
 import { useAuth } from '../landing/contexts/AuthContext';
 import apiService from '../services/api'; // Import API service
@@ -17,6 +17,31 @@ const DonorDashboard = () => {
   const [saveStatus, setSaveStatus] = useState('');
   const [donationHistory, setDonationHistory] = useState([]); // State for history
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [confidentialRequests, setConfidentialRequests] = useState([]);
+  const [loadingConfidentialRequests, setLoadingConfidentialRequests] = useState(false);
+
+  // Confidential data state
+  const [confidentialData, setConfidentialData] = useState({
+    pii: { governmentId: '', photograph: '' },
+    contactInfo: { emergencyContact: '', alternateContacts: [] },
+    detailedMedicalRecords: {
+      pastSurgeries: [],
+      chronicIllnesses: [],
+      mentalHealthHistory: [],
+      geneticDisorders: [],
+      familyMedicalHistory: [],
+      currentMedications: [],
+      allergies: []
+    },
+    labReports: {
+      bloodTestReports: [],
+      hlaTypingReports: [],
+      crossMatchResults: [],
+      imagingReports: []
+    }
+  });
+  const [loadingConfidentialData, setLoadingConfidentialData] = useState(false);
+  const [saveConfidentialStatus, setSaveConfidentialStatus] = useState('');
 
   // Fetch History on Tab Change
   React.useEffect(() => {
@@ -37,6 +62,40 @@ const DonorDashboard = () => {
       // If user.donations exists (from login), use it initially, but fetch fresh too
       if (user?.donations) setDonationHistory(user.donations);
       fetchHistory();
+    } else if (activeTab === 'confidential') {
+      const fetchConfidentialRequests = async () => {
+        setLoadingConfidentialRequests(true);
+        try {
+          const res = await apiService.getDonorConfidentialRequests(user.id);
+          if (res.success) {
+            setConfidentialRequests(res.data);
+          }
+        } catch (err) {
+          console.error("Failed to load confidential requests", err);
+        } finally {
+          setLoadingConfidentialRequests(false);
+        }
+      };
+
+      const fetchConfidentialData = async () => {
+        setLoadingConfidentialData(true);
+        try {
+          const res = await apiService.getConfidentialData();
+          if (res.success && res.data) {
+            setConfidentialData(prevData => ({
+              ...prevData,
+              ...res.data
+            }));
+          }
+        } catch (err) {
+          console.error("Failed to load confidential data", err);
+        } finally {
+          setLoadingConfidentialData(false);
+        }
+      };
+
+      fetchConfidentialRequests();
+      fetchConfidentialData();
     }
   }, [activeTab, user]);
 
@@ -68,6 +127,86 @@ const DonorDashboard = () => {
     }
   };
 
+  const handleRespondToRequest = async (requestId, status) => {
+    try {
+      const res = await apiService.respondToConfidentialRequest(requestId, status);
+      if (res.success) {
+        // Update the local state
+        setConfidentialRequests(prev =>
+          prev.map(req =>
+            req._id === requestId
+              ? { ...req, status, respondedAt: new Date() }
+              : req
+          )
+        );
+        alert(`Request ${status} successfully`);
+      }
+    } catch (error) {
+      console.error('Failed to respond to request', error);
+      alert('Failed to respond to request');
+    }
+  };
+
+  const handleSaveConfidentialData = async () => {
+    try {
+      setSaveConfidentialStatus('saving');
+      const res = await apiService.updateConfidentialData(confidentialData);
+      if (res.success) {
+        setSaveConfidentialStatus('success');
+        setTimeout(() => setSaveConfidentialStatus(''), 3000);
+      } else {
+        setSaveConfidentialStatus('error');
+      }
+    } catch (error) {
+      console.error('Failed to save confidential data', error);
+      setSaveConfidentialStatus('error');
+    }
+  };
+
+  const handleConfidentialDataChange = (category, field, value) => {
+    setConfidentialData(prev => ({
+      ...prev,
+      [category]: {
+        ...prev[category],
+        [field]: value
+      }
+    }));
+  };
+
+  const handleArrayFieldChange = (category, field, index, value) => {
+    setConfidentialData(prev => {
+      const newArray = [...prev[category][field]];
+      newArray[index] = value;
+      return {
+        ...prev,
+        [category]: {
+          ...prev[category],
+          [field]: newArray
+        }
+      };
+    });
+  };
+
+  const addArrayField = (category, field) => {
+    setConfidentialData(prev => ({
+      ...prev,
+      [category]: {
+        ...prev[category],
+        [field]: [...prev[category][field], '']
+      }
+    }));
+  };
+
+  const removeArrayField = (category, field, index) => {
+    setConfidentialData(prev => ({
+      ...prev,
+      [category]: {
+        ...prev[category],
+        [field]: prev[category][field].filter((_, i) => i !== index)
+      }
+    }));
+  };
+
   return (
     <div className="donor-dashboard">
       {/* Sidebar */}
@@ -80,6 +219,7 @@ const DonorDashboard = () => {
           {[
             { id: 'profile', icon: Users, label: 'My Profile' },
             { id: 'history', icon: Clock, label: 'Donation History' },
+            { id: 'confidential', icon: Lock, label: 'Confidential Data' },
             { id: 'education', icon: BookOpen, label: 'Education Center' },
             { id: 'settings', icon: Settings, label: 'Privacy & Settings' }
           ].map(tab => (
@@ -332,6 +472,206 @@ const DonorDashboard = () => {
                     <p className="text-xs text-gray-400">You have not completed any donations yet. Thank you for registering.</p>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* CONFIDENTIAL DATA SECTION */}
+          {activeTab === 'confidential' && (
+            <div className="animate-fade-in">
+              <h2 className="section-title">Confidential Medical Environment</h2>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* DATA ENTRY FORM */}
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="content-card">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-lg font-bold text-[#1e293b]">Confidential Data Entry</h3>
+                      {saveConfidentialStatus === 'success' && (
+                        <span className="text-green-600 text-xs font-bold flex items-center gap-1">
+                          <CheckCircle size={12} /> Saved Successfully
+                        </span>
+                      )}
+                      {saveConfidentialStatus === 'error' && (
+                        <span className="text-red-600 text-xs font-bold flex items-center gap-1">
+                          <AlertCircle size={12} /> Save Failed
+                        </span>
+                      )}
+                    </div>
+
+                    {loadingConfidentialData ? (
+                      <p className="text-center py-8 text-gray-500">Loading your confidential data...</p>
+                    ) : (
+                      <div className="space-y-6">
+                        {/* PII SECTION */}
+                        <div className="border-b border-gray-100 pb-4">
+                          <h4 className="text-sm font-bold text-[#64748b] uppercase mb-4">Personal Identification</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="form-group mb-0">
+                              <label className="form-label">Government ID Number</label>
+                              <input
+                                type="text"
+                                className="form-input"
+                                placeholder="Passport/SSN/Aadhar"
+                                value={confidentialData.pii.governmentId}
+                                onChange={(e) => handleConfidentialDataChange('pii', 'governmentId', e.target.value)}
+                              />
+                            </div>
+                            <div className="form-group mb-0">
+                              <label className="form-label">Emergency Contact Name/Phone</label>
+                              <input
+                                type="text"
+                                className="form-input"
+                                placeholder="Name - Phone"
+                                value={confidentialData.contactInfo.emergencyContact}
+                                onChange={(e) => handleConfidentialDataChange('contactInfo', 'emergencyContact', e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* MEDICAL RECORDS SECTION */}
+                        <div className="border-b border-gray-100 pb-4">
+                          <h4 className="text-sm font-bold text-[#64748b] uppercase mb-4">Medical History</h4>
+
+                          <div className="space-y-4">
+                            <div>
+                              <label className="form-label flex justify-between">
+                                Chronic Illnesses
+                                <button onClick={() => addArrayField('detailedMedicalRecords', 'chronicIllnesses')} className="text-[#10b981] text-xs font-bold">+ Add</button>
+                              </label>
+                              {confidentialData.detailedMedicalRecords.chronicIllnesses.map((item, index) => (
+                                <div key={index} className="flex gap-2 mb-2">
+                                  <input
+                                    type="text"
+                                    className="form-input"
+                                    value={item}
+                                    onChange={(e) => handleArrayFieldChange('detailedMedicalRecords', 'chronicIllnesses', index, e.target.value)}
+                                  />
+                                  <button onClick={() => removeArrayField('detailedMedicalRecords', 'chronicIllnesses', index)} className="text-red-500"><AlertCircle size={16} /></button>
+                                </div>
+                              ))}
+                              {confidentialData.detailedMedicalRecords.chronicIllnesses.length === 0 && <p className="text-xs text-gray-400 italic">None listed</p>}
+                            </div>
+
+                            <div>
+                              <label className="form-label flex justify-between">
+                                Allergies
+                                <button onClick={() => addArrayField('detailedMedicalRecords', 'allergies')} className="text-[#10b981] text-xs font-bold">+ Add</button>
+                              </label>
+                              {confidentialData.detailedMedicalRecords.allergies.map((item, index) => (
+                                <div key={index} className="flex gap-2 mb-2">
+                                  <input
+                                    type="text"
+                                    className="form-input"
+                                    value={item}
+                                    onChange={(e) => handleArrayFieldChange('detailedMedicalRecords', 'allergies', index, e.target.value)}
+                                  />
+                                  <button onClick={() => removeArrayField('detailedMedicalRecords', 'allergies', index)} className="text-red-500"><AlertCircle size={16} /></button>
+                                </div>
+                              ))}
+                              {confidentialData.detailedMedicalRecords.allergies.length === 0 && <p className="text-xs text-gray-400 italic">None listed</p>}
+                            </div>
+
+                            <div className="form-group mb-0">
+                              <label className="form-label">Current Medications</label>
+                              <textarea
+                                className="form-input min-h-[80px]"
+                                placeholder="List your current medications..."
+                                value={confidentialData.detailedMedicalRecords.currentMedications.join(', ')}
+                                onChange={(e) => handleConfidentialDataChange('detailedMedicalRecords', 'currentMedications', e.target.value.split(',').map(s => s.trim()))}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* LAB REPORTS / HLA TYPING */}
+                        <div>
+                          <h4 className="text-sm font-bold text-[#64748b] uppercase mb-4">Laboratory & HLA Data</h4>
+                          <div className="form-group mb-4">
+                            <label className="form-label">HLA Typing Results (if known)</label>
+                            <input
+                              type="text"
+                              className="form-input"
+                              placeholder="e.g. A2, B35, DR1..."
+                              value={confidentialData.labReports.hlaTypingReports.join(', ')}
+                              onChange={(e) => handleConfidentialDataChange('labReports', 'hlaTypingReports', e.target.value.split(',').map(s => s.trim()))}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="text-right pt-4">
+                          <button
+                            onClick={handleSaveConfidentialData}
+                            className={`btn-primary ${saveConfidentialStatus === 'saving' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            disabled={saveConfidentialStatus === 'saving'}
+                          >
+                            {saveConfidentialStatus === 'saving' ? 'Saving Securely...' : 'Save Confidential Data'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ACCESS REQUESTS SIDEBAR */}
+                <div className="lg:col-span-1 space-y-6">
+                  <div className="content-card">
+                    <h3 className="text-lg font-bold text-[#1e293b] mb-4 flex items-center gap-2">
+                      <Lock size={18} className="text-amber-500" /> Access Requests
+                    </h3>
+
+                    {loadingConfidentialRequests ? (
+                      <p className="text-center py-4 text-xs text-gray-500">Updating requests...</p>
+                    ) : confidentialRequests.length > 0 ? (
+                      <div className="space-y-3">
+                        {confidentialRequests.map((request) => (
+                          <div key={request._id} className="p-3 border border-gray-100 rounded-lg bg-gray-50">
+                            <p className="font-bold text-sm text-[#1e293b]">{request.hospitalName}</p>
+                            <p className="text-[10px] text-[#64748b] mb-2">Requested: {new Date(request.requestedAt).toLocaleDateString()}</p>
+
+                            {request.status === 'pending' ? (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleRespondToRequest(request._id, 'accepted')}
+                                  className="text-[10px] bg-green-500 text-white px-3 py-1 rounded font-bold hover:bg-green-600 transition-colors"
+                                >
+                                  Accept
+                                </button>
+                                <button
+                                  onClick={() => handleRespondToRequest(request._id, 'rejected')}
+                                  className="text-[10px] bg-red-500 text-white px-3 py-1 rounded font-bold hover:bg-red-600 transition-colors"
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            ) : (
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${request.status === 'accepted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                }`}>
+                                {request.status.toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6">
+                        <Shield size={32} className="mx-auto text-gray-200 mb-2" />
+                        <p className="text-xs text-gray-400">No active access requests.</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl">
+                    <div className="flex gap-2 text-amber-800 mb-1">
+                      <Lock size={14} className="mt-0.5" />
+                      <p className="text-xs font-bold">Privacy Note</p>
+                    </div>
+                    <p className="text-[10px] text-amber-700 leading-relaxed">
+                      Your confidential data is stored with end-to-end encryption. Only hospitals you explicitly approve can view this sensitive information for matching purposes.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           )}

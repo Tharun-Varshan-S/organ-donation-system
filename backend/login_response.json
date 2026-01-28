@@ -1,1 +1,14 @@
-{"success":true,"message":"Login successful","data":{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5NWQwMTQ3ZDNjNTMwNDQzYjMxNjlhOCIsImlhdCI6MTc2NzcwNDY4OSwiZXhwIjoxNzY4MzA5NDg5fQ.PA17TThz0aYiTis8O9huUttLm2YL-LqsU0Sv3n6p0wk","admin":{"id":"695d0147d3c530443b3169a8","name":"Healthcare Admin","email":"admin@healthcare.com","role":"admin","lastLogin":"2026-01-06T13:04:48.947Z"}}}
+{
+    "success": true,
+    "message": "Login successful",
+    "data": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5NWQwMTQ3ZDNjNTMwNDQzYjMxNjlhOCIsImlhdCI6MTc2NzcwNDY4OSwiZXhwIjoxNzY4MzA5NDg5fQ.PA17TThz0aYiTis8O9huUttLm2YL-LqsU0Sv3n6p0wk",
+        "admin": {
+            "id": "695d0147d3c530443b3169a8",
+            "name": "Healthcare Admin",
+            "email": "admin@healthcare.com",
+            "role": "admin",
+            "lastLogin": "2026-01-06T13:04:48.947Z"
+        }
+    }
+}

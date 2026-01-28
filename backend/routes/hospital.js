@@ -65,6 +65,9 @@ router.route('/donors')
 router.get('/donors/discovery', protectHospital, hospitalOnly, ensureApproved, getPublicDonors);
 router.get('/donors/:id/profile', protectHospital, hospitalOnly, ensureApproved, getDonorProfile);
 
+router.post('/donors/:id/request-confidential-data', protectHospital, hospitalOnly, ensureApproved, requestConfidentialData);
+router.get('/donors/:id/confidential-data', protectHospital, hospitalOnly, ensureApproved, getConfidentialDonorData);
+
 router.put('/donors/:id', protectHospital, hospitalOnly, ensureApproved, updateHospitalDonor);
 
 // @route   GET / POST /api/hospital/requests
