@@ -7,7 +7,8 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     LineChart, Line, AreaChart, Area, Cell, PieChart, Pie
 } from 'recharts';
-import { GlassCard, KPICard, SLAMeter } from './DashboardComponents';
+import { GlassCard, KPICard, SLAMeter, EmergencyBanner } from './DashboardComponents';
+import { motion, AnimatePresence } from 'framer-motion';
 import apiService from '../../../services/api';
 
 const OverviewTab = ({ stats }) => {
@@ -50,6 +51,8 @@ const OverviewTab = ({ stats }) => {
 
     return (
         <div className="space-y-8 pb-10">
+            {/* The Global Emergency Banner is handled by HospitalDashboard.jsx for cross-tab awareness */}
+
             {/* Actionable KPI cards with contextual insights */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <KPICard
@@ -202,20 +205,24 @@ const OverviewTab = ({ stats }) => {
                             System Service Health
                         </h3>
                         <p className="text-slate-400 text-sm leading-relaxed">
-                            Real-time monitoring of Organ Request lifecycle. Current response latency is within medical safety parameters.
-                            Efficiency is tracked via automated MongoDB aggregation pipelines.
+                            Real-time monitoring of Organ Request lifecycle.
+                            {stats?.slaHealth?.atRisk > 0
+                                ? ` Warning: ${stats.slaHealth.atRisk} critical requests have breached SLA medical parameters.`
+                                : stats?.slaHealth?.nearBreach > 0
+                                    ? ` Attention: ${stats.slaHealth.nearBreach} emergency cases are nearing SLA limits.`
+                                    : " Current response latency is within optimal medical safety parameters."}
                         </p>
                     </div>
                     <div className="w-full md:w-1/3 space-y-4">
                         <SLAMeter
-                            label="Urgent Response Compliance"
-                            value={1.5}
-                            max={4}
+                            label="Critical SLA Compliance"
+                            value={stats?.requests?.emergency - stats?.slaHealth?.atRisk || 0}
+                            max={stats?.requests?.emergency || 1}
                         />
                         <SLAMeter
-                            label="Organ Transport Latency"
-                            value={0.8}
-                            max={2}
+                            label="Operational Readiness"
+                            value={stats?.slaHealth?.operationalReadiness === 'ready' ? 100 : 85}
+                            max={100}
                         />
                     </div>
                 </div>

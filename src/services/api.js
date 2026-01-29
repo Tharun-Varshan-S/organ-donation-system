@@ -227,6 +227,14 @@ class ApiService {
         return this.handleResponse(response)
     }
 
+    async giveConsent(id) {
+        const response = await fetch(`${API_BASE_URL}/hospital/requests/${id}/give-consent`, {
+            method: 'PUT',
+            headers: this.getAuthHeaders('hospital')
+        })
+        return this.handleResponse(response)
+    }
+
     async getDonorProfile(id) {
         const response = await fetch(`${API_BASE_URL}/hospital/donors/${id}/profile`, {
             headers: this.getAuthHeaders('hospital')
@@ -245,6 +253,40 @@ class ApiService {
         const params = new URLSearchParams(filters);
         const response = await fetch(`${API_BASE_URL}/hospital/donors/discovery?${params}`, {
             headers: this.getAuthHeaders('hospital')
+        })
+        return this.handleResponse(response)
+    }
+
+    async validatePatient(patientData) {
+        const response = await fetch(`${API_BASE_URL}/hospital/patients/validate`, {
+            method: 'POST',
+            headers: this.getAuthHeaders('hospital'),
+            body: JSON.stringify(patientData)
+        })
+        return this.handleResponse(response)
+    }
+
+    async getPotentialMatches(requestId) {
+        const response = await fetch(`${API_BASE_URL}/hospital/requests/${requestId}/potential-matches`, {
+            headers: this.getAuthHeaders('hospital')
+        })
+        return this.handleResponse(response)
+    }
+
+    async selectDonor(requestId, donorId, donorSource, action = 'approve', reason = '') {
+        const response = await fetch(`${API_BASE_URL}/hospital/requests/${requestId}/select-donor`, {
+            method: 'POST',
+            headers: this.getAuthHeaders('hospital'),
+            body: JSON.stringify({ donorId, donorSource, action, reason })
+        })
+        return this.handleResponse(response)
+    }
+
+    async createTransplantRecord(data) {
+        const response = await fetch(`${API_BASE_URL}/hospital/transplants/operation`, {
+            method: 'POST',
+            headers: this.getAuthHeaders('hospital'),
+            body: JSON.stringify(data)
         })
         return this.handleResponse(response)
     }

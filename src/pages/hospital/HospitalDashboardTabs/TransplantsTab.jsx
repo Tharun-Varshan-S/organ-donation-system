@@ -5,7 +5,7 @@ import {
     Search, Filter, ChevronRight, Stethoscope
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GlassCard, StatusBadge } from './DashboardComponents';
+import { GlassCard, StatusBadge, StepTracker } from './DashboardComponents';
 import apiService from '../../../services/api';
 import Modal from '../../../components/Modal';
 import Button from '../../../components/Button';
@@ -54,7 +54,17 @@ const TransplantsTab = ({ transplants: initialTransplants = [] }) => {
                 setShowOutcomeModal(false);
             }
         } catch (error) {
-            alert("Failed to update transplant record.");
+        }
+    };
+
+    const handleUpdateStatus = async (txId, newStatus) => {
+        try {
+            const res = await apiService.updateTransplantStatus(txId, { status: newStatus });
+            if (res.success) {
+                setTransplants(prev => prev.map(t => t._id === txId ? res.data : t));
+            }
+        } catch (error) {
+            alert("Failed to update status.");
         }
     };
 
@@ -134,7 +144,7 @@ const TransplantsTab = ({ transplants: initialTransplants = [] }) => {
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                                                 <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
                                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1 flex items-center gap-1"><Stethoscope size={10} /> Lead Surgeon</p>
                                                     <p className="text-xs font-black text-slate-700 truncate">{tx.surgeryDetails?.surgeonName || 'Unassigned'}</p>
@@ -154,17 +164,49 @@ const TransplantsTab = ({ transplants: initialTransplants = [] }) => {
                                                     </p>
                                                 </div>
                                             </div>
+
+                                            <div className="border-t border-slate-100 pt-6">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Procedural Lifecycle</p>
+                                                <StepTracker
+                                                    steps={['Scheduled', 'In Transit', 'Extraction', 'Transplant', 'Recovery']}
+                                                    currentStep={
+                                                        tx.status === 'scheduled' ? 0 :
+                                                            tx.status === 'in-progress' ? 3 :
+                                                                tx.status === 'completed' ? 5 : 0
+                                                    }
+                                                />
+                                            </div>
                                         </div>
 
                                         {/* Actions */}
                                         <div className="xl:w-48 p-6 flex flex-col justify-center gap-3 bg-slate-50/30">
-                                            <Button
-                                                variant="primary"
-                                                onClick={() => handleOpenOutcome(tx)}
-                                                className="w-full text-xs font-black uppercase tracking-widest py-2 h-auto"
-                                            >
-                                                Log Outcome
-                                            </Button>
+                                            {tx.status === 'scheduled' && (
+                                                <Button
+                                                    variant="primary"
+                                                    onClick={() => handleUpdateStatus(tx._id, 'in-progress')}
+                                                    className="w-full text-xs font-black uppercase tracking-widest py-2 h-auto bg-blue-600 border-none"
+                                                >
+                                                    Start Procedure
+                                                </Button>
+                                            )}
+                                            {tx.status === 'in-progress' && (
+                                                <Button
+                                                    variant="primary"
+                                                    onClick={() => handleOpenOutcome(tx)}
+                                                    className="w-full text-xs font-black uppercase tracking-widest py-2 h-auto bg-emerald-600 border-none"
+                                                >
+                                                    Complete & Log
+                                                </Button>
+                                            )}
+                                            {tx.status === 'completed' && (
+                                                <Button
+                                                    variant="secondary"
+                                                    className="w-full text-xs font-black uppercase tracking-widest py-2 h-auto"
+                                                    onClick={() => handleOpenOutcome(tx)}
+                                                >
+                                                    Update Outcome
+                                                </Button>
+                                            )}
                                             <Button
                                                 variant="secondary"
                                                 className="w-full text-xs font-black uppercase tracking-widest py-2 h-auto"
