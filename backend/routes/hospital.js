@@ -20,11 +20,18 @@ import {
   getHospitalAnalytics,
   getPublicDonors,
   validateEligibility,
+  giveConsent,
   getDonorProfile,
   getDoctors,
   addDoctor,
   updateDoctor,
-  removeDoctor
+  removeDoctor,
+  requestConfidentialData,
+  getConfidentialDonorData,
+  validatePatient,
+  getPotentialMatches,
+  handleDonorSelection,
+  createOperationRecord
 } from '../controllers/hospitalController.js';
 import {
   hospitalRegister,
@@ -83,9 +90,16 @@ router.put('/transplants/:id/outcome', protectHospital, hospitalOnly, ensureAppr
 // @route   PUT /api/hospital/requests/:id/sla-breach
 router.put('/requests/:id/sla-breach', protectHospital, hospitalOnly, ensureApproved, captureSLABreach);
 router.put('/requests/:id/validate-eligibility', protectHospital, hospitalOnly, ensureApproved, validateEligibility);
+router.put('/requests/:id/give-consent', protectHospital, hospitalOnly, ensureApproved, giveConsent);
 
 // @route   GET /api/hospital/donors/:id/timeline
 router.get('/donors/:id/timeline', protectHospital, hospitalOnly, ensureApproved, getDonorTimeline);
+
+// Patient Validation & Matching
+router.post('/patients/validate', protectHospital, hospitalOnly, ensureApproved, validatePatient);
+router.get('/requests/:id/potential-matches', protectHospital, hospitalOnly, ensureApproved, getPotentialMatches);
+router.post('/requests/:id/select-donor', protectHospital, hospitalOnly, ensureApproved, handleDonorSelection);
+router.post('/transplants/operation', protectHospital, hospitalOnly, ensureApproved, createOperationRecord);
 
 // @route   GET / POST / PUT / DELETE /api/hospital/doctors
 router.route('/doctors')

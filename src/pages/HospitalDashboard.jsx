@@ -303,13 +303,15 @@ const HospitalDashboard = () => {
         <main className="p-6 lg:p-10 max-w-7xl mx-auto">
 
           {/* Emergency Banner (Conditional) */}
-          {(requests.some(r => r.urgency === 'emergency') || stats?.emergencyCount > 0) && (
-            <EmergencyBanner
-              message="Critical Organ Requests Pending Approval"
-              count={stats?.emergencyCount || 2}
-              onClick={() => setActiveTab('requests')}
-            />
-          )}
+          <AnimatePresence>
+            {stats?.criticalRequests?.length > 0 && (
+              <EmergencyBanner
+                message={`${stats.criticalRequests[0].patient.name} (${stats.criticalRequests[0].organType?.toUpperCase()}) - ALPHA MATCH REQUIRED`}
+                count={stats.criticalRequests.length}
+                onClick={() => setActiveTab('requests')}
+              />
+            )}
+          </AnimatePresence>
 
           <header className="mb-10">
             <div className="flex items-center gap-3 text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">

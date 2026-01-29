@@ -810,6 +810,18 @@ const updateTransplantOutcome = asyncHandler(async (req, res) => {
 
   await transplant.save();
 
+  // Complete the associated request
+  const request = await Request.findById(transplant.request);
+  if (request) {
+    request.status = 'completed';
+    request.lifecycle.push({
+      stage: 'completed',
+      timestamp: new Date(),
+      notes: `Transplant outcome logged: ${success ? 'Successful' : 'Unsuccessful'}`
+    });
+    await request.save();
+  }
+
   // Auto-calculate hospital success metrics
   const hospital = await Hospital.findById(req.hospital.id);
   const totalTransplants = await Transplant.countDocuments({
@@ -1027,30 +1039,25 @@ const getPublicDonors = asyncHandler(async (req, res) => {
 // @route   PUT /api/hospital/requests/:id/validate-eligibility
 // @access  Private (Approved Hospital)
 const validateEligibility = asyncHandler(async (req, res) => {
-  const request = await Request.findOne({
-    _id: req.params.id,
-    hospital: req.hospital.id,
-    status: 'matched'
-  });
-
+  const request = await Request.findOne({ _id: req.params.id, hospital: req.hospital.id });
   if (!request) {
-    throw new ErrorResponse('Matched request not found', 404);
+    throw new ErrorResponse('Request not found', 404);
   }
-
   request.eligibilityStatus = 'validated';
-  request.lifecycle.push({
-    stage: 'eligibility_validated',
-    timestamp: new Date(),
-    notes: 'Hospital eligibility validated'
-  });
-
+  request.lifecycle.push({ stage: 'eligibility_validated', notes: 'Clinically validated for transplant surgery.' });
   await request.save();
+  res.status(200).json({ success: true, data: request });
+});
 
-  res.status(200).json({
-    success: true,
-    message: 'Eligibility validated successfully',
-    data: request
-  });
+const giveConsent = asyncHandler(async (req, res) => {
+  const request = await Request.findOne({ _id: req.params.id, hospital: req.hospital.id });
+  if (!request) {
+    throw new ErrorResponse('Request not found', 404);
+  }
+  request.consentStatus = 'given';
+  request.lifecycle.push({ stage: 'consent_given', notes: 'Patient/Family consent verified by clinical team.' });
+  await request.save();
+  res.status(200).json({ success: true, data: request });
 });
 
 // @desc    Get Detailed Donor Profile (Conditional Reveal)
@@ -1311,97 +1318,215 @@ const getConfidentialDonorData = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Request confidential data from a donor
-// @route   POST /api/hospital/donors/:id/request-confidential-data
+// @desc    Validate Patient before request creation
+// @route   POST /api/hospital/patients/validate
 // @access  Private (Approved Hospital)
-const requestConfidentialData = asyncHandler(async (req, res) => {
-  const donorId = req.params.id;
-  const hospitalId = req.hospital.id;
+const validatePatient = asyncHandler(async (req, res) => {
+  const { name, age } = req.body;
 
-  const donor = await Donor.findById(donorId);
-
-  if (!donor) {
-    throw new ErrorResponse('Donor not found', 404);
+  if (!name || !age) {
+    throw new ErrorResponse('Please provide patient name and age', 400);
   }
 
-  // Check if a request already exists from this hospital
-  const existingRequest = donor.consentRequests.find(
-    (request) => request.hospitalId.toString() === hospitalId.toString()
-  );
+  // Search for prior requests or transplants for this patient (Fuzzy match)
+  const priorRequests = await Request.find({
+    'patient.name': { $regex: new RegExp(name, 'i') },
+    'patient.age': age
+  }).sort({ createdAt: -1 });
 
-  if (existingRequest) {
-    throw new ErrorResponse('Confidential data request already sent to this donor', 400);
+  const priorTransplants = await Transplant.find({
+    'recipient.name': { $regex: new RegExp(name, 'i') },
+    'recipient.age': age
+  }).sort({ createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    data: {
+      isNew: priorRequests.length === 0 && priorTransplants.length === 0,
+      priorRequests,
+      priorTransplants
+    }
+  });
+});
+
+// @desc    Get potential matches for a request
+// @route   GET /api/hospital/requests/:id/potential-matches
+// @access  Private (Approved Hospital)
+const getPotentialMatches = asyncHandler(async (req, res) => {
+  const request = await Request.findById(req.params.id);
+
+  if (!request) {
+    throw new ErrorResponse('Request not found', 404);
   }
 
-  // Add a new pending request
-  donor.consentRequests.push({
-    hospitalId: hospitalId,
-    status: 'pending',
-    requestedAt: new Date(),
+  // Filter 1: Organ & Blood Type Compatibility
+  // Simplified blood compatibility: Exact match + O- universal donor logic
+  const compatibleBloodTypes = [request.patient.bloodType];
+  if (request.patient.bloodType !== 'O-') {
+    compatibleBloodTypes.push('O-');
+  }
+  // Add more complex compatibility if needed
+
+  let donorQuery = {
+    status: 'active',
+    'donationPreferences.organTypes': request.organType,
+    'medicalInfo.bloodType': { $in: compatibleBloodTypes }
+  };
+
+  const potentialDonors = await Donor.find(donorQuery).lean();
+
+  // Search in Users who are public donors
+  let userQuery = {
+    isDonor: true,
+    visibilityStatus: 'public',
+    availabilityStatus: 'Active',
+    organ: request.organType,
+    bloodType: { $in: compatibleBloodTypes }
+  };
+  const potentialUserDonors = await User.find(userQuery).lean();
+
+  // Scoring Logic
+  const scoredDonors = [...potentialDonors.map(d => ({ ...d, source: 'donor' })), ...potentialUserDonors.map(u => ({ ...u, source: 'user' }))].map(donor => {
+    let score = 100;
+    const donorBloodType = donor.source === 'donor' ? donor.medicalInfo.bloodType : donor.bloodType;
+
+    // Perfect blood match bonus
+    if (donorBloodType === request.patient.bloodType) score += 20;
+
+    // Age proximity scoring (closer age = better match)
+    const donorAge = donor.source === 'donor' ?
+      (donor.personalInfo.dateOfBirth ? new Date().getFullYear() - new Date(donor.personalInfo.dateOfBirth).getFullYear() : 35)
+      : 30; // Mock age for user if not available
+    const ageDiff = Math.abs(donorAge - request.patient.age);
+    score -= Math.min(ageDiff, 50);
+
+    // Medical fitness score (Mock)
+    const fitnessScore = Math.floor(Math.random() * 20) + 80; // 80-100
+    score += (fitnessScore - 80);
+
+    return { ...donor, matchScore: score, fitnessScore };
   });
 
-  await donor.save();
+  // Sort by highest score
+  scoredDonors.sort((a, b) => b.matchScore - a.matchScore);
 
-  await Notification.create({
-    recipient: donorId, // Assuming donor is a User model and can receive notifications
-    type: 'CONFIDENTIAL_DATA_REQUEST',
-    title: 'Confidential Data Request',
-    message: `Hospital ${req.hospital.name} has requested access to your confidential data.`,
-    relatedEntity: {
-      id: hospitalId,
-      model: 'Hospital',
+  res.status(200).json({
+    success: true,
+    count: scoredDonors.length,
+    data: scoredDonors
+  });
+});
+
+// @desc    Handle Donor Selection (Approve/Reject)
+// @route   POST /api/hospital/requests/:id/select-donor
+// @access  Private (Approved Hospital)
+const handleDonorSelection = asyncHandler(async (req, res) => {
+  const { donorId, donorSource, action, reason } = req.body;
+
+  const request = await Request.findOne({ _id: req.params.id, hospital: req.hospital.id });
+  if (!request) {
+    throw new ErrorResponse('Request not found', 404);
+  }
+
+  if (action === 'approve') {
+    request.status = 'matched';
+    request.matchedDonor = donorId; // Note: If user source, this works because both use Mongodb collection
+    request.lifecycle.push({
+      stage: 'matched',
+      timestamp: new Date(),
+      notes: `Donor ${donorId} selected from ${donorSource}. Reason: ${reason || 'Optimal medical match'}`
+    });
+
+    // Update Donor Status to Assigned/Matched
+    if (donorSource === 'donor') {
+      await Donor.findByIdAndUpdate(donorId, { status: 'matched' });
+    } else {
+      await User.findByIdAndUpdate(donorId, { availabilityStatus: 'Matched' });
+    }
+
+    await request.save();
+
+    // Create Notification and Audit Log
+    await AuditLog.create({
+      actionType: 'MATCH',
+      performedBy: { id: req.hospital.id, name: req.hospital.name, role: 'Hospital' },
+      entityType: 'REQUEST',
+      entityId: request._id,
+      details: `Matched request ${request.requestId} with donor ${donorId}`
+    });
+  } else {
+    // Rejection log
+    await AuditLog.create({
+      actionType: 'MATCH_REJECTION',
+      performedBy: { id: req.hospital.id, name: req.hospital.name, role: 'Hospital' },
+      entityType: 'REQUEST',
+      entityId: request._id,
+      details: `Rejected donor ${donorId} for request ${request.requestId}. Reason: ${reason}`
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    data: request
+  });
+});
+
+// @desc    Create Operation Record (Move to Transplant Queue)
+// @route   POST /api/hospital/transplants
+// @access  Private (Approved Hospital)
+const createOperationRecord = asyncHandler(async (req, res) => {
+  const { requestId, donorId, donorSource, surgeryDate, surgeonName, operatingRoom } = req.body;
+
+  const request = await Request.findById(requestId);
+  if (!request || request.status !== 'matched') {
+    throw new ErrorResponse('Valid matched request required', 400);
+  }
+
+  // Check if transplant already exists
+  const existingTransplant = await Transplant.findOne({ request: requestId });
+  if (existingTransplant) {
+    throw new ErrorResponse('Transplant record already exists for this request', 400);
+  }
+
+  const transplant = await Transplant.create({
+    request: requestId,
+    donor: donorId,
+    organType: request.organType,
+    recipient: {
+      name: request.patient.name,
+      age: request.patient.age,
+      bloodType: request.patient.bloodType,
+      hospital: req.hospital.id
     },
+    surgeryDetails: {
+      scheduledDate: surgeryDate,
+      surgeonName,
+      operatingRoom
+    },
+    status: 'scheduled'
   });
+
+  request.lifecycle.push({
+    stage: 'scheduled',
+    timestamp: new Date(),
+    notes: `Transplant surgery scheduled for ${new Date(surgeryDate).toLocaleDateString()} with Dr. ${surgeonName}`
+  });
+  await request.save();
 
   await AuditLog.create({
-    actionType: 'REQUEST_CONFIDENTIAL_DATA',
-    performedBy: { id: hospitalId, name: req.hospital.name, role: 'Hospital' },
-    entityType: 'DONOR',
-    entityId: donorId,
-    details: `Hospital ${req.hospital.name} requested confidential data from donor ${donorId}`,
+    actionType: 'SCHEDULE_SURGERY',
+    performedBy: { id: req.hospital.id, name: req.hospital.name, role: 'Hospital' },
+    entityType: 'TRANSPLANT',
+    entityId: transplant._id,
+    details: `Scheduled surgery for transplant ${transplant.transplantId}`
   });
 
-  res.status(200).json({
+  res.status(201).json({
     success: true,
-    message: 'Confidential data request sent to donor',
+    data: transplant
   });
 });
 
-// @desc    Get confidential donor data
-// @route   GET /api/hospital/donors/:id/confidential-data
-// @access  Private (Approved Hospital)
-const getConfidentialDonorData = asyncHandler(async (req, res) => {
-  const donorId = req.params.id;
-  const hospitalId = req.hospital.id;
-
-  const donor = await Donor.findById(donorId);
-
-  if (!donor) {
-    throw new ErrorResponse('Donor not found', 404);
-  }
-
-  // Check if the hospital has an accepted request from this donor
-  const acceptedRequest = donor.consentRequests.find(
-    (request) => request.hospitalId.toString() === hospitalId.toString() && request.status === 'accepted'
-  );
-
-  if (!acceptedRequest) {
-    throw new ErrorResponse('Access denied: Donor has not accepted your request for confidential data', 403);
-  }
-
-  await AuditLog.create({
-    actionType: 'ACCESS_CONFIDENTIAL_DATA',
-    performedBy: { id: hospitalId, name: req.hospital.name, role: 'Hospital' },
-    entityType: 'DONOR',
-    entityId: donorId,
-    details: `Hospital ${req.hospital.name} accessed confidential data from donor ${donorId}`,
-  });
-
-  res.status(200).json({
-    success: true,
-    data: donor.confidentialData,
-  });
-});
 
 export {
   hospitalRegister,
@@ -1426,11 +1551,16 @@ export {
   getHospitalAnalytics,
   getPublicDonors,
   validateEligibility,
+  giveConsent,
   getDonorProfile,
   getDoctors,
   addDoctor,
   updateDoctor,
   removeDoctor,
   requestConfidentialData,
-  getConfidentialDonorData
+  getConfidentialDonorData,
+  validatePatient,
+  getPotentialMatches,
+  handleDonorSelection,
+  createOperationRecord
 };

@@ -61,26 +61,47 @@ export const KPICard = ({ title, value, subtext, icon: Icon, trend, urgency = 'n
 
 export const EmergencyBanner = ({ message, count, onClick }) => (
     <motion.div
-        initial={{ height: 0, opacity: 0 }}
-        animate={{ height: 'auto', opacity: 1 }}
-        className="sticky top-20 z-50 mb-6 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: -100, opacity: 0 }}
+        className="sticky top-4 z-50 mb-8 mx-auto w-full"
     >
-        <div className="glass-panel border-l-4 border-red-500 p-4 rounded-r-lg flex items-center justify-between shadow-lg bg-red-50/90 backdrop-blur-md">
-            <div className="flex items-center space-x-4">
-                <div className="p-2 bg-red-100 rounded-full animate-pulse">
-                    <AlertCircle className="w-6 h-6 text-red-600" />
+        <div className="relative group cursor-pointer" onClick={onClick}>
+            {/* Pulsing Outer Glow */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-red-600 to-rose-600 rounded-[2rem] blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
+
+            <div className="relative bg-slate-900 border-l-8 border-red-500 rounded-3xl p-5 flex items-center justify-between shadow-2xl transition-all duration-300">
+                <div className="flex items-center space-x-6">
+                    <div className="relative shrink-0">
+                        <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-20"></div>
+                        <div className="relative p-3 bg-red-500 rounded-2xl shadow-lg shadow-red-500/50">
+                            <AlertCircle className="w-6 h-6 text-white" />
+                        </div>
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-3">
+                            <h4 className="text-sm font-black text-red-500 uppercase tracking-[0.2em]">Priority Alpha Alert</h4>
+                            <span className="px-2 py-0.5 bg-red-500/10 border border-red-500/20 rounded text-[10px] font-black text-red-500 uppercase tracking-widest animate-pulse">Critical SLA</span>
+                        </div>
+                        <p className="text-xl font-black text-white mt-1 tracking-tight">
+                            {message} <span className="text-slate-500 ml-2 font-medium">({count} Total Pending)</span>
+                        </p>
+                    </div>
                 </div>
-                <div>
-                    <h4 className="text-lg font-bold text-red-900">Emergency Action Required</h4>
-                    <p className="text-red-700 font-medium">{message} ({count} pending)</p>
+
+                <div className="hidden md:flex items-center gap-6">
+                    <div className="text-right">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Status</p>
+                        <p className="text-sm font-black text-white uppercase italic">Mission Control Active</p>
+                    </div>
+                    <div className="h-10 w-px bg-slate-800"></div>
+                    <button
+                        className="px-8 py-3 bg-red-600 hover:bg-white hover:text-red-600 text-white font-black uppercase tracking-[0.1em] text-xs rounded-2xl shadow-xl transition-all active:scale-95 group-hover:shadow-red-500/20"
+                    >
+                        Initiate Match
+                    </button>
                 </div>
             </div>
-            <button
-                onClick={onClick}
-                className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-md transition-all active:scale-95"
-            >
-                Review Now
-            </button>
         </div>
     </motion.div>
 );
@@ -96,7 +117,7 @@ export const SLAMeter = ({ value, max = 100, label }) => {
         <div className="w-full">
             <div className="flex justify-between text-xs font-semibold text-slate-500 mb-1">
                 <span>{label}</span>
-                <span>{value}/{max} hrs</span>
+                <span>{value}/{max}</span>
             </div>
             <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
                 <motion.div
