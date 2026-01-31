@@ -11,17 +11,19 @@ import {
     FileText,
     TrendingDown,
     Filter,
-    Search
+    Search,
+    ArrowRight
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { GlassCard, SLAMeter, StatusBadge } from './DashboardComponents';
 import './Requests.css';
 
 const Requests = () => {
+    const navigate = useNavigate();
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-    const [selectedRequest, setSelectedRequest] = useState(null);
-    const [showTimeline, setShowTimeline] = useState(false);
     const [showDelayModal, setShowDelayModal] = useState(false);
     const [delayReason, setDelayReason] = useState('');
     const [currentRequestForDelay, setCurrentRequestForDelay] = useState(null);
@@ -219,8 +221,8 @@ const Requests = () => {
         const matchesUrgency = urgencyFilter ? request.patient.urgencyLevel === urgencyFilter : true;
         const matchesOrgan = organTypeFilter ? request.organType === organTypeFilter : true;
         const sla = calculateSLA(request.createdAt, request.patient.urgencyLevel, request.slaBreachedAt);
-        const matchesSLA = slaBreachFilter === 'breached' ? sla.isBreached : 
-                          slaBreachFilter === 'at-risk' ? !sla.isBreached && sla.color === 'red' : true;
+        const matchesSLA = slaBreachFilter === 'breached' ? sla.isBreached :
+            slaBreachFilter === 'at-risk' ? !sla.isBreached && sla.color === 'red' : true;
         return matchesUrgency && matchesOrgan && matchesSLA;
     });
 
@@ -305,122 +307,68 @@ const Requests = () => {
                 </div>
             )}
 
-            <div className="requests-grid">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {loading ? <p>Loading requests...</p> : filteredRequests.length === 0 ? (
                     <div className="empty-state">No requests match your filters.</div>
                 ) : filteredRequests.map(request => {
-                    const sla = calculateSLA(request.createdAt, request.patient.urgencyLevel, request.slaBreachedAt);
+                    const start = new Date(request.createdAt).getTime();
+                    const now = new Date().getTime();
+                    const elapsed = (now - start) / (1000 * 60 * 60);
+                    const limit = request.patient?.urgencyLevel === 'critical' ? 24 : 72;
+                    const remaining = Math.max(0, limit - elapsed);
                     const isEmergency = request.isEmergency || request.patient.urgencyLevel === 'critical';
 
                     return (
-                        <motion.div
+                        <GlassCard
                             key={request._id}
-                            className={`request-card ${getUrgencyColor(request.patient.urgencyLevel)} ${isEmergency ? 'emergency-locked' : ''}`}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            onClick={() => {
-                                setSelectedRequest(request);
-                                setShowTimeline(true);
-                            }}
+                            urgency={request.patient?.urgencyLevel === 'critical' ? 'critical' : 'normal'}
+                            hoverEffect
+                            onClick={() => navigate(`/hospital/requests/${request._id}`)}
+                            className="relative"
                         >
                             {isEmergency && (
-                                <div className="emergency-lock-badge">
+                                <div className="absolute top-4 right-4 p-1.5 bg-rose-600 text-white rounded-lg shadow-lg">
                                     <Lock size={12} />
-                                    Emergency Mode
                                 </div>
                             )}
 
-                            <div className="request-header">
-                                <span className="organ-badge">{request.organType}</span>
-                                <span className={`urgency-badge ${request.patient.urgencyLevel}`}>
-                                    {request.patient.urgencyLevel}
-                                </span>
-                            </div>
-
-                            <div className="patient-info">
-                                <h3>{request.patient.name}</h3>
-                                <div className="patient-meta">
-                                    <span>{request.patient.age} yrs</span>
-                                    <span>•</span>
-                                    <span className="blood-type">{request.patient.bloodType}</span>
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${request.patient?.urgencyLevel === 'critical' ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'
+                                    }`}>
+                                    {request.organType === 'heart' ? <Heart size={24} /> : <Activity size={24} />}
                                 </div>
-                            </div>
-
-                            {/* SLA Countdown Bar */}
-                            <div className="sla-countdown-container">
-                                <div className="sla-countdown-header">
-                                    <Clock size={14} />
-                                    <span className="sla-text">{sla.text}</span>
-                                </div>
-                                <div className="sla-progress-bar">
-                                    <div
-                                        className={`sla-progress-fill ${sla.color}`}
-                                        style={{ width: `${sla.percentage}%` }}
-                                    />
-                                </div>
-                                {sla.isBreached && !request.delayReason && (
-                                    <button
-                                        className="capture-delay-btn"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setCurrentRequestForDelay(request);
-                                            setShowDelayModal(true);
-                                        }}
-                                    >
-                                        <FileText size={12} />
-                                        Capture Delay Reason
-                                    </button>
-                                )}
-                                {request.delayReason && (
-                                    <div className="delay-reason-display">
-                                        <AlertCircle size={12} />
-                                        <span>Delay: {request.delayReason}</span>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-lg font-black text-slate-800 tracking-tight uppercase">{request.organType}</h3>
+                                        <span className="text-[10px] font-mono text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">#{request.requestId?.slice(-6)}</span>
                                     </div>
-                                )}
-                            </div>
-
-                            <div className="request-footer">
-                                <span className={`status-text ${request.status}`}>
-                                    {request.status === 'pending' && <Clock size={14} />}
-                                    {request.status === 'matched' && <CheckCircle2 size={14} />}
-                                    {request.status}
-                                </span>
-
-                                {request.status === 'matched' && (
-                                    <div className="action-buttons">
-                                        {request.eligibilityStatus !== 'validated' && (
-                                            <button
-                                                className="action-btn validate-btn"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleValidateEligibility(request._id);
-                                                }}
-                                            >
-                                                Validate Eligibility
-                                            </button>
-                                        )}
-
-                                        {request.eligibilityStatus === 'validated' && request.consentStatus === 'given' && (
-                                            <button
-                                                className="action-btn reveal-btn"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleRevealDonor(request.matchedDonor);
-                                                }}
-                                            >
-                                                Reveal Donor
-                                            </button>
-                                        )}
-
-                                        {request.eligibilityStatus === 'validated' && request.consentStatus !== 'given' && (
-                                            <span className="waiting-text">Waiting for Consent...</span>
-                                        )}
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <StatusBadge status={request.status} />
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{request.patient?.bloodType}</span>
                                     </div>
-                                )}
-
-                                <span className="req-id">#{request.requestId?.slice(-6) || '---'}</span>
+                                </div>
                             </div>
-                        </motion.div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Patient Profile</p>
+                                    <p className="font-bold text-slate-700">{request.patient?.name} <span className="text-slate-400 ml-1">({request.patient?.age}y)</span></p>
+                                </div>
+
+                                <SLAMeter
+                                    value={remaining}
+                                    max={limit}
+                                    label=""
+                                />
+
+                                <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                        <Clock size={12} /> {request.status === 'matched' ? 'Donor Assigned' : 'Awaiting Match'}
+                                    </span>
+                                    <ArrowRight size={16} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
+                                </div>
+                            </div>
+                        </GlassCard>
                     );
                 })}
             </div>
@@ -469,50 +417,6 @@ const Requests = () => {
                 </div>
             )}
 
-            {/* Lifecycle Timeline Modal */}
-            {showTimeline && selectedRequest && (
-                <div className="modal-overlay" onClick={() => setShowTimeline(false)}>
-                    <motion.div
-                        className="modal-content timeline-modal"
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="modal-header">
-                            <h2>Request Lifecycle: {selectedRequest.requestId}</h2>
-                            <button onClick={() => setShowTimeline(false)}>
-                                <Plus size={24} style={{ transform: 'rotate(45deg)' }} />
-                            </button>
-                        </div>
-                        <div className="request-timeline-container">
-                            {selectedRequest.lifecycle && selectedRequest.lifecycle.length > 0 ? (
-                                selectedRequest.lifecycle.map((event, index) => (
-                                    <div key={index} className="timeline-item">
-                                        <div className="timeline-marker">
-                                            {event.stage === 'created' && <Plus size={16} />}
-                                            {event.stage === 'matched' && <CheckCircle2 size={16} />}
-                                            {event.stage === 'completed' && <CheckCircle2 size={16} />}
-                                        </div>
-                                        <div className="timeline-content">
-                                            <div className="timeline-header">
-                                                <h4>{event.stage.replace('_', ' ').toUpperCase()}</h4>
-                                                <span className="timeline-date">
-                                                    {new Date(event.timestamp).toLocaleString()}
-                                                </span>
-                                            </div>
-                                            {event.notes && <p className="timeline-details">{event.notes}</p>}
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="no-timeline">
-                                    <p>No lifecycle events recorded yet.</p>
-                                </div>
-                            )}
-                        </div>
-                    </motion.div>
-                </div>
-            )}
 
             {/* Delay Reason Capture Modal */}
             {showDelayModal && currentRequestForDelay && (

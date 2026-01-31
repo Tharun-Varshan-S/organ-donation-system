@@ -4,6 +4,7 @@ import {
   XCircle, Filter, Home, LayoutDashboard, ClipboardList,
   UserCircle, Settings, LogOut, Bell, Menu, X, ShieldAlert, Stethoscope, ChevronRight
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api';
@@ -27,6 +28,7 @@ import { EmergencyBanner, GlassCard } from './hospital/HospitalDashboardTabs/Das
 
 const HospitalDashboard = () => {
   const { user, logout, showApprovalMessage, setShowApprovalMessage } = useAuth();
+  const navigate = useNavigate();
 
   // State
   const [activeTab, setActiveTab] = useState('overview');
@@ -308,7 +310,10 @@ const HospitalDashboard = () => {
               <EmergencyBanner
                 message={`${stats.criticalRequests[0].patient.name} (${stats.criticalRequests[0].organType?.toUpperCase()}) - ALPHA MATCH REQUIRED`}
                 count={stats.criticalRequests.length}
-                onClick={() => setActiveTab('requests')}
+                onClick={() => {
+                  const firstCriticalId = stats.criticalRequests[0]._id;
+                  navigate(`/hospital/requests/${firstCriticalId}`);
+                }}
               />
             )}
           </AnimatePresence>

@@ -11,6 +11,7 @@ import HospitalOverview from './landing/pages/HospitalOverview';
 import HospitalRequestDetails from './landing/pages/HospitalRequestDetails';
 import HospitalDetailedList from './pages/HospitalList'; // Alias logic if needed
 import HospitalDetailPage from './pages/HospitalDetailPage';
+import DonorDashboard from './pages/DonorDashboard';
 import './App.css';
 
 // Internal Hospital Portal Components
@@ -21,6 +22,7 @@ import HospitalPatients from './pages/hospital/Patients';
 import HospitalDonors from './pages/hospital/Donors';
 import HospitalDoctors from './pages/hospital/Doctors';
 import HospitalRequests from './pages/hospital/Requests';
+import RequestDetail from './pages/hospital/RequestDetail';
 import HospitalTransplants from './pages/hospital/Transplants';
 import HospitalProfile from './pages/hospital/Profile';
 
@@ -38,6 +40,7 @@ function App() {
 
             {/* Authenticated Portal Routes */}
             <Route path="/login" element={<AuthPage />} />
+            <Route path="/donor/dashboard" element={<DonorDashboard />} />
 
             {/* Hospital Dashboard Routes (Public/Admin View) */}
             <Route path="/hospitals" element={<HospitalDashboard />} />
@@ -60,6 +63,7 @@ function App() {
               <Route path="donors" element={<HospitalDonors />} />
               <Route path="doctors" element={<HospitalDoctors />} />
               <Route path="requests" element={<HospitalRequests />} />
+              <Route path="requests/:requestId" element={<RequestDetail />} />
               <Route path="transplants" element={<HospitalTransplants />} />
               <Route path="profile" element={<HospitalProfile />} />
             </Route>

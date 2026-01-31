@@ -40,7 +40,7 @@ router.put('/hospitals/:id/status', updateHospitalStatus);
 
 // Donor & Analytics routes
 router.get('/donors', getDonors);
-router.get('/analytics/donors', getDonorAnalytics);
+router.get('/donors/analytics', getDonorAnalytics);
 router.get('/analytics/hospital-performance', getHospitalPerformance);
 
 // Request & Transplant routes (read-only)
@@ -49,7 +49,7 @@ router.get('/transplants', getTransplants);
 
 // Audit & Reports
 router.get('/audit', getAuditLogs);
-router.get('/reports/system', getSystemReports);
+router.get('/reports', getSystemReports);
 
 // Settings
 router.get('/settings', getSettings);

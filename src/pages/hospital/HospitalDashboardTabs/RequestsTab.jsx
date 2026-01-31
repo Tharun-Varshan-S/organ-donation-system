@@ -4,6 +4,7 @@ import {
     Filter, Search, UserCheck, Timer, History, Lock, AlertTriangle,
     CheckCircle2, Plus, Info
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GlassCard, StatusBadge, StepTracker, SLAMeter } from './DashboardComponents';
 import apiService from '../../../services/api';
@@ -13,6 +14,7 @@ import Input from '../../../components/Input';
 import Select from '../../../components/Select';
 
 const RequestsTab = ({ requests: initialRequests = [] }) => {
+    const navigate = useNavigate();
     const [requests, setRequests] = useState(initialRequests || []);
     const [filter, setFilter] = useState({ organ: 'all', urgency: 'all', status: 'all' });
     const [searchTerm, setSearchTerm] = useState('');
@@ -381,7 +383,7 @@ const RequestsTab = ({ requests: initialRequests = [] }) => {
                                                     {remaining <= 0 && !req.delayReason && (
                                                         <Button variant="secondary" onClick={() => setCaptureDelayId(req._id)} className="border-rose-200 text-rose-600 text-xs py-1.5 h-auto">Log SLA Breach</Button>
                                                     )}
-                                                    <Button variant="secondary" onClick={() => setSelectedRequest(req)} className="text-xs py-1.5 h-auto flex items-center gap-2">
+                                                    <Button variant="secondary" onClick={() => navigate(`/hospital/requests/${req._id}`)} className="text-xs py-1.5 h-auto flex items-center gap-2">
                                                         Clinical History <ArrowRight size={14} />
                                                     </Button>
                                                 </div>
