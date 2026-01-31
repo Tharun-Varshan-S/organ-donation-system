@@ -34,13 +34,7 @@ const HospitalDashboard = () => {
 
     const fetchDashboardStats = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/api/hospital/dashboard', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            const data = await response.json();
+            const data = await apiService.getHospitalDashboardStats();
             if (data.success) {
                 setStats(data.data);
             }

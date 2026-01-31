@@ -17,8 +17,16 @@ const DonorDashboard = () => {
   const [saveStatus, setSaveStatus] = useState('');
   const [donationHistory, setDonationHistory] = useState([]); // State for history
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [liveRequests, setLiveRequests] = useState([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [applyingTo, setApplyingTo] = useState(null);
+  const [applicationForm, setApplicationForm] = useState({
+    medicalHistory: '',
+    lifestyleData: '',
+    consentSigned: false
+  });
 
-  // Fetch History on Tab Change
+  // Fetch Data on Tab Change
   React.useEffect(() => {
     if (activeTab === 'history') {
       const fetchHistory = async () => {
@@ -34,9 +42,25 @@ const DonorDashboard = () => {
           setLoadingHistory(false);
         }
       };
-      // If user.donations exists (from login), use it initially, but fetch fresh too
       if (user?.donations) setDonationHistory(user.donations);
       fetchHistory();
+    }
+
+    if (activeTab === 'requests') {
+      const fetchRequests = async () => {
+        setLoadingRequests(true);
+        try {
+          const res = await apiService.getPublicRequests();
+          if (res.success) {
+            setLiveRequests(res.data);
+          }
+        } catch (err) {
+          console.error("Failed to load requests", err);
+        } finally {
+          setLoadingRequests(false);
+        }
+      };
+      fetchRequests();
     }
   }, [activeTab, user]);
 
@@ -68,6 +92,25 @@ const DonorDashboard = () => {
     }
   };
 
+  const handleApply = async (requestId) => {
+    if (!applicationForm.consentSigned) {
+      alert("You must sign the consent to apply.");
+      return;
+    }
+
+    try {
+      const res = await apiService.applyToRequest(requestId, applicationForm);
+      if (res.success) {
+        alert("Application submitted successfully! The hospital will review your medical profile.");
+        setApplyingTo(null);
+        setApplicationForm({ medicalHistory: '', lifestyleData: '', consentSigned: false });
+        // Refresh requests or mark as applied
+      }
+    } catch (error) {
+      alert(error.message || "Failed to submit application.");
+    }
+  };
+
   return (
     <div className="donor-dashboard">
       {/* Sidebar */}
@@ -79,6 +122,7 @@ const DonorDashboard = () => {
         <nav className="sidebar-nav">
           {[
             { id: 'profile', icon: Users, label: 'My Profile' },
+            { id: 'requests', icon: Activity, label: 'Live Requests' },
             { id: 'history', icon: Clock, label: 'Donation History' },
             { id: 'education', icon: BookOpen, label: 'Education Center' },
             { id: 'settings', icon: Settings, label: 'Privacy & Settings' }
@@ -237,6 +281,112 @@ const DonorDashboard = () => {
             </div>
           )}
 
+          {/* REQUESTS SECTION */}
+          {activeTab === 'requests' && (
+            <div className="animate-fade-in">
+              <h2 className="section-title">Live Organ Requests</h2>
+              <p className="text-sm text-slate-500 mb-6 italic">Browse real-time requests from hospitals. Your medical profile will be shared upon application.</p>
+
+              {loadingRequests ? (
+                <div className="text-center py-12">
+                  <div className="loading-spinner mx-auto mb-4" />
+                  <p className="text-slate-400 font-bold">Scanning Medical Network...</p>
+                </div>
+              ) : liveRequests.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {liveRequests.map(req => (
+                    <div key={req._id} className="content-card hover:border-blue-500 transition-all">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
+                            <Activity size={24} />
+                          </div>
+                          <div>
+                            <h3 className="font-black text-[#1e293b] uppercase">{req.organType} Match Needed</h3>
+                            <p className="text-[10px] font-bold text-slate-400">REQ ID: #{req.requestId}</p>
+                          </div>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${req.patient?.urgencyLevel === 'critical' ? 'bg-rose-100 text-rose-600 animate-pulse' : 'bg-blue-100 text-blue-600'
+                          }`}>
+                          {req.patient?.urgencyLevel}
+                        </span>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                          <div className="grid grid-cols-3 gap-4 text-center">
+                            <div>
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Blood Type</p>
+                              <p className="font-bold text-slate-800">{req.patient?.bloodType}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Patient Age</p>
+                              <p className="font-bold text-slate-800">{req.patient?.age}y</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Hospital</p>
+                              <p className="font-bold text-slate-800 truncate">{req.hospital?.name}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {applyingTo === req._id ? (
+                          <div className="animate-fade-in space-y-4 border-t pt-4">
+                            <div className="form-group">
+                              <label className="text-xs font-black text-slate-500 uppercase mb-2 block">Personal Medical Summary</label>
+                              <textarea
+                                className="form-input text-sm h-24"
+                                placeholder="Briefly describe your medical history (e.g. Prior surgeries, chronic conditions...)"
+                                value={applicationForm.medicalHistory}
+                                onChange={(e) => setApplicationForm({ ...applicationForm, medicalHistory: e.target.value })}
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label className="text-xs font-black text-slate-500 uppercase mb-2 block">Lifestyle & Habits</label>
+                              <input
+                                className="form-input text-sm"
+                                placeholder="e.g. Non-smoker, Regular exercise, No alcohol..."
+                                value={applicationForm.lifestyleData}
+                                onChange={(e) => setApplicationForm({ ...applicationForm, lifestyleData: e.target.value })}
+                              />
+                            </div>
+                            <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-xl border border-amber-100">
+                              <input
+                                type="checkbox"
+                                className="w-5 h-5"
+                                checked={applicationForm.consentSigned}
+                                onChange={(e) => setApplicationForm({ ...applicationForm, consentSigned: e.target.checked })}
+                              />
+                              <p className="text-[10px] font-bold text-amber-800 leading-tight">
+                                I hereby give legal consent for my medical profile to be shared with {req.hospital?.name} for matching purposes.
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={() => setApplyingTo(null)} className="btn-secondary py-2 text-xs flex-1">Abandom</button>
+                              <button onClick={() => handleApply(req._id)} className="btn-primary py-2 text-xs flex-1">Submit Analysis</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setApplyingTo(req._id)}
+                            className="w-full py-3 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg shadow-slate-200"
+                          >
+                            Begin Application
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
+                  <Activity size={48} className="mx-auto text-slate-200 mb-4" />
+                  <p className="text-slate-400 font-bold">No active requests found for your profile criteria.</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* EDUCATION SECTION */}
           {activeTab === 'education' && (
             <div className="animate-fade-in">
@@ -336,7 +486,7 @@ const DonorDashboard = () => {
             </div>
           )}
 
-          {/* SETTINGS SECTION (Placeholder for now, merged visibility into profile as per common UX) */}
+          {/* SETTINGS SECTION */}
           {activeTab === 'settings' && (
             <div className="animate-fade-in">
               <h2 className="section-title">Privacy & Settings</h2>

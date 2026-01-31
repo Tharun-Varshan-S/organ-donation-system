@@ -31,7 +31,11 @@ import {
   validatePatient,
   getPotentialMatches,
   handleDonorSelection,
-  createOperationRecord
+  createOperationRecord,
+  getRequestById,
+  updateApplicationStatus,
+  applyToRequest,
+  getPublicRequests
 } from '../controllers/hospitalController.js';
 import {
   hospitalRegister,
@@ -48,6 +52,8 @@ router.post('/register', hospitalRegister);
 
 // @route   POST /api/hospital/login
 router.post('/login', hospitalLogin);
+
+router.get('/requests/public', getPublicRequests);
 
 // Protected & Approved Routes Middleware Wrapper (Optional, but defining individually is clearer)
 
@@ -81,6 +87,10 @@ router.put('/donors/:id', protectHospital, hospitalOnly, ensureApproved, updateH
 router.route('/requests')
   .get(protectHospital, hospitalOnly, ensureApproved, getHospitalRequests)
   .post(protectHospital, hospitalOnly, ensureApproved, createHospitalRequest);
+
+router.get('/requests/:id', protectHospital, hospitalOnly, ensureApproved, getRequestById);
+router.put('/applications/:id', protectHospital, hospitalOnly, ensureApproved, updateApplicationStatus);
+router.post('/requests/:id/apply', applyToRequest);
 
 // @route   GET / PUT /api/hospital/transplants
 router.get('/transplants', protectHospital, hospitalOnly, ensureApproved, getHospitalTransplants);

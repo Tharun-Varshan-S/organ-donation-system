@@ -1,6 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle, Clock, Activity, ArrowRight, FileText, TrendingUp, AlertCircle, Plus, Calendar, User, MapPin, Award } from 'lucide-react';
-import { motion } from 'framer-motion';
+import {
+    CheckCircle,
+    Clock,
+    Activity,
+    ArrowRight,
+    FileText,
+    TrendingUp,
+    AlertCircle,
+    Plus,
+    Calendar,
+    User,
+    MapPin,
+    Award,
+    X,
+    ClipboardCheck,
+    Stethoscope
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import apiService from '../../services/api';
+import { GlassCard, SLAMeter, StatusBadge } from './DashboardComponents';
 import './Transplants.css';
 
 const Transplants = () => {
@@ -22,79 +40,38 @@ const Transplants = () => {
         operatingRoom: ''
     });
     const [doctors, setDoctors] = useState([]);
+    const [compInput, setCompInput] = useState('');
 
     useEffect(() => {
-        fetchTransplants();
-        fetchSuccessMetrics();
-        fetchDoctors();
+        loadPageData();
     }, []);
 
-    const fetchDoctors = async () => {
+    const loadPageData = async () => {
+        setLoading(true);
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/api/hospital/transplants', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await response.json();
-            if (data.success) {
-                const doctorSet = new Set();
-                data.data.forEach(tx => {
-                    if (tx.surgeryDetails?.surgeonName) {
-                        doctorSet.add(tx.surgeryDetails.surgeonName);
-                    }
-                });
-                setDoctors(Array.from(doctorSet));
-            }
-        } catch (error) {
-            console.error('Error fetching doctors:', error);
-        }
-    };
+            const [txRes, profileRes, doctorsRes] = await Promise.all([
+                apiService.getHospitalTransplants(),
+                apiService.getHospitalProfile(),
+                apiService.getDoctors()
+            ]);
 
-    const fetchSuccessMetrics = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/api/hospital/profile', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await response.json();
-            if (data.success && data.data.stats) {
-                setSuccessMetrics(data.data.stats);
-            }
-        } catch (error) {
-            console.error('Error fetching success metrics:', error);
-        }
-    };
+            if (txRes.success) setTransplants(txRes.data);
+            if (profileRes.success && profileRes.data.stats) setSuccessMetrics(profileRes.data.stats);
+            if (doctorsRes.success) setDoctors(doctorsRes.data);
 
-    const fetchTransplants = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/api/hospital/transplants', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await response.json();
-            if (data.success) {
-                setTransplants(data.data);
-            }
         } catch (error) {
-            console.error('Error fetching transplants:', error);
+            console.error('Error loading page data:', error);
         } finally {
             setLoading(false);
         }
     };
 
-    const updateStatus = async (id, newStatus) => {
+    const handleUpdateStatus = async (id, newStatus) => {
         try {
-            const token = localStorage.getItem('token');
-            await fetch(`http://localhost:5000/api/hospital/transplants/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ status: newStatus })
-            });
-            fetchTransplants();
-            fetchSuccessMetrics();
+            const res = await apiService.updateTransplantStatus(id, { status: newStatus });
+            if (res.success) {
+                setTransplants(prev => prev.map(tx => tx._id === id ? res.data : tx));
+            }
         } catch (error) {
             console.error('Error updating status:', error);
         }
@@ -113,26 +90,16 @@ const Transplants = () => {
     const handlePrepSubmit = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/api/hospital/transplants/${selectedTransplant._id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    surgeryDetails: {
-                        scheduledDate: prepFormData.scheduledDate,
-                        surgeonName: prepFormData.surgeonName,
-                        operatingRoom: prepFormData.operatingRoom
-                    }
-                })
+            const res = await apiService.updateTransplantStatus(selectedTransplant._id, {
+                surgeryDetails: {
+                    scheduledDate: prepFormData.scheduledDate,
+                    surgeonName: prepFormData.surgeonName,
+                    operatingRoom: prepFormData.operatingRoom
+                }
             });
 
-            const data = await response.json();
-            if (data.success) {
-                fetchTransplants();
-                fetchDoctors();
+            if (res.success) {
+                setTransplants(prev => prev.map(tx => tx._id === selectedTransplant._id ? res.data : tx));
                 setShowPrepModal(false);
                 setSelectedTransplant(null);
             }
@@ -155,34 +122,30 @@ const Transplants = () => {
     const handleOutcomeSubmit = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/api/hospital/transplants/${selectedTransplant._id}/outcome`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(outcomeData)
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                fetchTransplants();
-                fetchSuccessMetrics();
+            const res = await apiService.updateTransplantOutcome(selectedTransplant._id, outcomeData);
+            if (res.success) {
+                setTransplants(prev => prev.map(tx => tx._id === selectedTransplant._id ? res.data : tx));
                 setShowOutcomeModal(false);
                 setSelectedTransplant(null);
+                // Refresh metrics
+                const profileRes = await apiService.getHospitalProfile();
+                if (profileRes.success) setSuccessMetrics(profileRes.data.stats);
             }
         } catch (error) {
             console.error('Error updating outcome:', error);
         }
     };
 
-    const addComplication = (complication) => {
-        if (complication && !outcomeData.complications.includes(complication)) {
-            setOutcomeData({
-                ...outcomeData,
-                complications: [...outcomeData.complications, complication]
-            });
+    const addComplication = (e) => {
+        if (e.key === 'Enter' && compInput.trim()) {
+            e.preventDefault();
+            if (!outcomeData.complications.includes(compInput.trim())) {
+                setOutcomeData({
+                    ...outcomeData,
+                    complications: [...outcomeData.complications, compInput.trim()]
+                });
+            }
+            setCompInput('');
         }
     };
 
@@ -193,330 +156,306 @@ const Transplants = () => {
         });
     };
 
-    if (loading) return <div>Loading operations...</div>;
+    if (loading) return (
+        <div className="flex items-center justify-center p-20">
+            <Activity className="animate-spin text-blue-500 mr-2" />
+            <span className="font-black text-slate-400 uppercase tracking-widest text-xs">Syncing Operation Data...</span>
+        </div>
+    );
 
     return (
-        <div className="transplants-page">
-            <div className="page-header">
+        <div className="transplants-page pb-20">
+            <header className="page-header mb-10">
                 <div>
-                    <h2>Transplant Operations</h2>
-                    <p className="text-gray-500">Track and log post-transplant outcomes</p>
+                    <h2 className="text-3xl font-black text-slate-800 tracking-tight uppercase">Operation Control</h2>
+                    <p className="text-sm font-bold text-slate-400 tracking-wide mt-1">Surgical Lifecycle & Outcome Monitoring</p>
                 </div>
-                {successMetrics && (
-                    <div className="success-metrics-card">
-                        <div className="metric-item">
-                            <TrendingUp size={20} />
-                            <div>
-                                <span className="metric-label">Success Rate</span>
-                                <span className="metric-value">{successMetrics.successRate || 0}%</span>
-                            </div>
-                        </div>
-                        <div className="metric-item">
-                            <CheckCircle size={20} />
-                            <div>
-                                <span className="metric-label">Successful</span>
-                                <span className="metric-value">{successMetrics.successfulTransplants || 0}</span>
-                            </div>
+
+                <div className="success-metrics-grid">
+                    <div className="metric-card">
+                        <span className="metric-title">Hospital Success Rate</span>
+                        <div className="metric-value-container">
+                            <span className="metric-value">{successMetrics?.successRate || '0'}%</span>
+                            <span className="metric-trend flex items-center gap-1"><TrendingUp size={14} /> +2.4%</span>
                         </div>
                     </div>
-                )}
-            </div>
-            <div className="transplants-list">
-                {transplants.length === 0 ? <div className="empty-state">No active transplant records</div> :
+                    <div className="metric-card">
+                        <span className="metric-title">Total Life-Saves</span>
+                        <div className="metric-value-container">
+                            <span className="metric-value">{successMetrics?.successfulTransplants || '0'}</span>
+                            <Award className="text-amber-500" size={24} />
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <section className="transplants-grid">
+                {transplants.length === 0 ? (
+                    <div className="empty-transplants">
+                        <Stethoscope size={48} className="mx-auto text-slate-200" />
+                        <h3>No active surgical records found</h3>
+                    </div>
+                ) : (
                     transplants.map(tx => (
-                        <div key={tx._id} className="transplant-row">
-                            <div className="tx-info">
-                                <div className="tx-main">
-                                    <span className="organ-tag">{tx.organType || 'Organ'}</span>
-                                    <h4>{tx.recipient?.name || 'Recipient'}</h4>
+                        <GlassCard key={tx._id} className="operation-card p-6" hoverEffect>
+                            <div className="patient-profile-snippet">
+                                <span className="organ-badge-pill">{tx.organType}</span>
+                                <h4 className="recipient-name uppercase">{tx.recipient?.name}</h4>
+                                <div className="donor-link">
+                                    <User size={14} />
+                                    <span>Matched Donor: {tx.donor?.name || 'Authorized Donor'}</span>
                                 </div>
-                                <div className="tx-details">
-                                    <span>Donor: {tx.donor?.personalInfo?.firstName || 'N/A'}</span>
-                                    <span>Date: {tx.surgeryDate ? new Date(tx.surgeryDate).toLocaleDateString() : tx.surgeryDetails?.scheduledDate ? new Date(tx.surgeryDetails.scheduledDate).toLocaleDateString() : 'TBD'}</span>
+                                <div className="text-[10px] font-black text-slate-400 flex items-center gap-1.5 mt-1 uppercase tracking-widest">
+                                    <Calendar size={12} />
+                                    {tx.surgeryDetails?.scheduledDate ? new Date(tx.surgeryDetails.scheduledDate).toLocaleString() : 'Scheduling Pending'}
                                 </div>
                             </div>
 
-                            <div className="tx-status-flow">
-                                {['scheduled', 'in-progress', 'completed'].map((step, idx) => {
-                                    const isCurrent = tx.status === step;
-                                    const isPast = ['scheduled', 'in-progress', 'completed'].indexOf(tx.status) > idx;
+                            <div className="workflow-tracker">
+                                {[
+                                    { id: 'scheduled', label: 'Allocated' },
+                                    { id: 'in-progress', label: 'Operative' },
+                                    { id: 'completed', label: 'Post-Op' }
+                                ].map((step, idx) => {
+                                    const allSteps = ['scheduled', 'in-progress', 'completed'];
+                                    const currentIdx = allSteps.indexOf(tx.status);
+                                    const isPast = currentIdx > idx;
+                                    const isCurrent = tx.status === step.id;
 
                                     return (
                                         <div
-                                            key={step}
-                                            className={`status-step ${isCurrent ? 'current' : ''} ${isPast ? 'past' : ''}`}
-                                            onClick={() => updateStatus(tx._id, step)}
+                                            key={step.id}
+                                            className={`workflow-step ${isPast ? 'completed' : ''} ${isCurrent ? 'active' : ''}`}
+                                            onClick={() => handleUpdateStatus(tx._id, step.id)}
                                         >
-                                            {step.replace('-', ' ')}
+                                            <div className="step-marker">
+                                                {isPast ? <CheckCircle size={16} /> : <div className="w-2 h-2 rounded-full bg-current" />}
+                                            </div>
+                                            <span className="step-label">{step.label}</span>
                                         </div>
                                     );
                                 })}
                             </div>
 
-                            {tx.status === 'scheduled' && !tx.surgeryDetails?.surgeonName && (
-                                <button
-                                    className="prepare-ot-btn"
-                                    onClick={() => openPrepModal(tx)}
-                                >
-                                    <Calendar size={14} />
-                                    Prepare OT
-                                </button>
-                            )}
-
-                            {tx.surgeryDetails?.surgeonName && (
-                                <div className="surgery-assignment">
-                                    <div className="assignment-item">
-                                        <User size={14} />
-                                        <span>{tx.surgeryDetails.surgeonName}</span>
-                                    </div>
-                                    {tx.surgeryDetails.operatingRoom && (
-                                        <div className="assignment-item">
-                                            <MapPin size={14} />
-                                            <span>OT {tx.surgeryDetails.operatingRoom}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {tx.status === 'completed' && tx.outcome?.success === true && (
-                                <div className="ops-done-badge">
-                                    <Award size={16} />
-                                    <span>OPS DONE</span>
-                                </div>
-                            )}
-
-                            {tx.status === 'completed' && (
-                                <div className="tx-outcome-section">
-                                    {tx.outcome?.success !== null ? (
-                                        <div className={`outcome-display ${tx.outcome.success ? 'success' : 'failed'}`}>
-                                            <CheckCircle size={16} />
-                                            <span>Outcome: {tx.outcome.success ? 'Successful' : 'Failed'}</span>
-                                            {tx.outcome.complications && tx.outcome.complications.length > 0 && (
-                                                <span className="complications-count">
-                                                    {tx.outcome.complications.length} complication(s)
-                                                </span>
-                                            )}
+                            <div className="operation-actions">
+                                {tx.status === 'completed' ? (
+                                    tx.outcome?.success !== null ? (
+                                        <div className={`outcome-badge ${tx.outcome.success ? 'success' : 'failed'}`}>
+                                            {tx.outcome.success ? <Award size={16} /> : <AlertCircle size={16} />}
+                                            {tx.outcome.success ? 'Success' : 'Failed'}
                                         </div>
                                     ) : (
-                                        <button
-                                            className="log-outcome-btn"
-                                            onClick={() => openOutcomeModal(tx)}
-                                        >
-                                            <FileText size={14} />
+                                        <button className="btn-action-primary" onClick={() => openOutcomeModal(tx)}>
+                                            <ClipboardCheck size={16} />
                                             Log Outcome
                                         </button>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    ))
-                }
-            </div>
+                                    )
+                                ) : (
+                                    <button className="btn-action-outline" onClick={() => openPrepModal(tx)}>
+                                        <Calendar size={16} />
+                                        Update OT Prep
+                                    </button>
+                                )}
 
-            {/* Outcome Logging Modal */}
-            {showOutcomeModal && selectedTransplant && (
-                <div className="modal-overlay" onClick={() => setShowOutcomeModal(false)}>
-                    <motion.div
-                        className="modal-content"
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="modal-header">
-                            <h2>Log Post-Transplant Outcome</h2>
-                            <button onClick={() => setShowOutcomeModal(false)}>
-                                <Plus size={24} style={{ transform: 'rotate(45deg)' }} />
-                            </button>
-                        </div>
-                        <form onSubmit={handleOutcomeSubmit}>
-                            <div className="form-section">
-                                <h3>Transplant Details</h3>
-                                <p><strong>ID:</strong> {selectedTransplant.transplantId}</p>
-                                <p><strong>Organ:</strong> {selectedTransplant.organType}</p>
-                                <p><strong>Recipient:</strong> {selectedTransplant.recipient?.name || 'N/A'}</p>
-                                <p><strong>Age:</strong> {selectedTransplant.recipient?.age || 'N/A'}</p>
-                                <p><strong>Blood Type:</strong> {selectedTransplant.recipient?.bloodType || 'N/A'}</p>
-                            </div>
-
-                            <div className="form-section">
-                                <h3>Outcome</h3>
-                                <div className="outcome-radio-group">
-                                    <label className="outcome-radio">
-                                        <input
-                                            type="radio"
-                                            name="success"
-                                            value="true"
-                                            checked={outcomeData.success === true}
-                                            onChange={() => setOutcomeData({ ...outcomeData, success: true })}
-                                        />
-                                        <CheckCircle size={20} />
-                                        <span>Successful</span>
-                                    </label>
-                                    <label className="outcome-radio">
-                                        <input
-                                            type="radio"
-                                            name="success"
-                                            value="false"
-                                            checked={outcomeData.success === false}
-                                            onChange={() => setOutcomeData({ ...outcomeData, success: false })}
-                                        />
-                                        <AlertCircle size={20} />
-                                        <span>Failed</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div className="form-section">
-                                <h3>Complications</h3>
-                                <div className="complications-input">
-                                    <input
-                                        type="text"
-                                        placeholder="Add complication..."
-                                        onKeyPress={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                addComplication(e.target.value);
-                                                e.target.value = '';
-                                            }
-                                        }}
-                                    />
-                                </div>
-                                {outcomeData.complications.length > 0 && (
-                                    <div className="complications-list">
-                                        {outcomeData.complications.map((comp, idx) => (
-                                            <span key={idx} className="complication-tag">
-                                                {comp}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeComplication(idx)}
-                                                    className="remove-tag"
-                                                >
-                                                    ×
-                                                </button>
-                                            </span>
-                                        ))}
+                                {tx.surgeryDetails?.surgeonName && (
+                                    <div className="assignment-capsule">
+                                        <div className="capsule-item">
+                                            <Stethoscope size={12} />
+                                            <span>Dr. {tx.surgeryDetails.surgeonName?.split(' ').pop()}</span>
+                                        </div>
+                                        <div className="capsule-item border-l border-slate-200 pl-2">
+                                            <MapPin size={12} />
+                                            <span>{tx.surgeryDetails.operatingRoom || 'OT-X'}</span>
+                                        </div>
                                     </div>
                                 )}
                             </div>
+                        </GlassCard>
+                    ))
+                )}
+            </section>
 
-                            <div className="form-section">
-                                <h3>Notes</h3>
-                                <textarea
-                                    className="full-width"
-                                    rows={4}
-                                    placeholder="Additional notes about the outcome..."
-                                    value={outcomeData.notes}
-                                    onChange={(e) => setOutcomeData({ ...outcomeData, notes: e.target.value })}
-                                />
+            {/* Preparation Modal */}
+            <AnimatePresence>
+                {showPrepModal && selectedTransplant && (
+                    <div className="modal-overlay">
+                        <motion.div
+                            className="bg-white rounded-[2.5rem] p-10 w-full max-w-xl shadow-2xl"
+                            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 50, scale: 0.95 }}
+                        >
+                            <div className="flex justify-between items-center mb-8">
+                                <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">Surgical Logistics</h3>
+                                <button onClick={() => setShowPrepModal(false)} className="p-2 hover:bg-slate-50 rounded-full transition-colors">
+                                    <X size={24} className="text-slate-300" />
+                                </button>
                             </div>
 
-                            <div className="form-section">
-                                <label className="checkbox-label">
+                            <form onSubmit={handlePrepSubmit} className="space-y-6">
+                                <div className="space-y-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 mb-6">
+                                    <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        <span>Recipient: {selectedTransplant.recipient?.name}</span>
+                                        <span>Organ: {selectedTransplant.organType}</span>
+                                    </div>
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
+                                        Operation Schedule *
+                                    </label>
+                                    <input
+                                        type="datetime-local"
+                                        className="form-input"
+                                        value={prepFormData.scheduledDate}
+                                        onChange={(e) => setPrepFormData({ ...prepFormData, scheduledDate: e.target.value })}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="form-group">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
+                                            Lead Surgeon *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            placeholder="Enter surgeon name"
+                                            value={prepFormData.surgeonName}
+                                            onChange={(e) => setPrepFormData({ ...prepFormData, surgeonName: e.target.value })}
+                                            list="surgeons"
+                                            required
+                                        />
+                                        <datalist id="surgeons">
+                                            {doctors.map((doc, idx) => (
+                                                <option key={idx} value={doc.name || doc} />
+                                            ))}
+                                        </datalist>
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
+                                            Operating Room
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            placeholder="e.g. OT-4"
+                                            value={prepFormData.operatingRoom}
+                                            onChange={(e) => setPrepFormData({ ...prepFormData, operatingRoom: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-blue-100 active:scale-95 transition-all mt-4">
+                                    Validate & Allocate OT
+                                </button>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Outcome Modal */}
+            <AnimatePresence>
+                {showOutcomeModal && selectedTransplant && (
+                    <div className="modal-overlay">
+                        <motion.div
+                            className="bg-white rounded-[2.5rem] p-10 w-full max-w-2xl shadow-2xl"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                        >
+                            <div className="flex justify-between items-center mb-8">
+                                <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">Clinical Post-Op Log</h3>
+                                <button onClick={() => setShowOutcomeModal(false)} className="p-2 hover:bg-slate-50 rounded-full transition-colors">
+                                    <X size={24} className="text-slate-300" />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleOutcomeSubmit} className="space-y-8">
+                                <div className="outcome-selector">
+                                    <div
+                                        className={`outcome-option success ${outcomeData.success === true ? 'selected' : ''}`}
+                                        onClick={() => setOutcomeData({ ...outcomeData, success: true })}
+                                    >
+                                        <div className="outcome-icon-circle">
+                                            <Award size={24} />
+                                        </div>
+                                        <span className="outcome-option-label">Operation Successful</span>
+                                    </div>
+                                    <div
+                                        className={`outcome-option failed ${outcomeData.success === false ? 'selected' : ''}`}
+                                        onClick={() => setOutcomeData({ ...outcomeData, success: false })}
+                                    >
+                                        <div className="outcome-icon-circle">
+                                            <AlertCircle size={24} />
+                                        </div>
+                                        <span className="outcome-option-label">Operation Failed</span>
+                                    </div>
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
+                                        Complications Encountereded
+                                    </label>
+                                    <div className="tag-input-wrapper">
+                                        {outcomeData.complications.map((comp, idx) => (
+                                            <span key={idx} className="tag-badge">
+                                                {comp}
+                                                <button type="button" onClick={() => removeComplication(idx)} className="tag-remove-btn">
+                                                    <X size={12} />
+                                                </button>
+                                            </span>
+                                        ))}
+                                        <input
+                                            className="tag-field"
+                                            placeholder="Type complication and press Enter..."
+                                            value={compInput}
+                                            onChange={(e) => setCompInput(e.target.value)}
+                                            onKeyDown={addComplication}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
+                                        Clinical Observation Notes
+                                    </label>
+                                    <textarea
+                                        className="form-input min-h-[120px]"
+                                        placeholder="Enter detailed operative notes..."
+                                        value={outcomeData.notes}
+                                        onChange={(e) => setOutcomeData({ ...outcomeData, notes: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100">
                                     <input
                                         type="checkbox"
+                                        id="followUp"
+                                        className="w-5 h-5 accent-amber-600"
                                         checked={outcomeData.followUpRequired}
                                         onChange={(e) => setOutcomeData({ ...outcomeData, followUpRequired: e.target.checked })}
                                     />
-                                    Follow-up required
-                                </label>
-                            </div>
+                                    <label htmlFor="followUp" className="text-xs font-bold text-amber-800 uppercase tracking-wider">
+                                        Mandatory Follow-up Required
+                                    </label>
+                                </div>
 
-                            <div className="modal-footer">
-                                <button type="button" className="cancel-btn" onClick={() => setShowOutcomeModal(false)}>
-                                    Cancel
+                                <button
+                                    type="submit"
+                                    className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-all ${outcomeData.success === null ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-emerald-600 text-white shadow-emerald-100 hover:bg-emerald-700 active:scale-95'
+                                        }`}
+                                    disabled={outcomeData.success === null}
+                                >
+                                    Seal Clinical Record & Close Case
                                 </button>
-                                <button type="submit" className="submit-btn" disabled={outcomeData.success === null}>
-                                    Save Outcome
-                                </button>
-                            </div>
-                        </form>
-                    </motion.div>
-                </div>
-            )}
-
-            {/* Preparation Form Modal */}
-            {showPrepModal && selectedTransplant && (
-                <div className="modal-overlay" onClick={() => setShowPrepModal(false)}>
-                    <motion.div
-                        className="modal-content"
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="modal-header">
-                            <h2>Transplant Preparation</h2>
-                            <button onClick={() => setShowPrepModal(false)}>
-                                <Plus size={24} style={{ transform: 'rotate(45deg)' }} />
-                            </button>
-                        </div>
-                        <form onSubmit={handlePrepSubmit}>
-                            <div className="form-section">
-                                <h3>Transplant Details</h3>
-                                <p><strong>ID:</strong> {selectedTransplant.transplantId}</p>
-                                <p><strong>Organ:</strong> {selectedTransplant.organType}</p>
-                                <p><strong>Recipient:</strong> {selectedTransplant.request?.patient?.name || selectedTransplant.recipient?.name || 'N/A'}</p>
-                            </div>
-
-                            <div className="form-section">
-                                <h3>Surgery Scheduling</h3>
-                                <label>
-                                    <Calendar size={16} />
-                                    Scheduled Date & Time *
-                                </label>
-                                <input
-                                    type="datetime-local"
-                                    className="full-width mt-2"
-                                    value={prepFormData.scheduledDate}
-                                    onChange={(e) => setPrepFormData({ ...prepFormData, scheduledDate: e.target.value })}
-                                    required
-                                />
-                            </div>
-
-                            <div className="form-section">
-                                <h3>Doctor & OT Assignment</h3>
-                                <label>
-                                    <User size={16} />
-                                    Surgeon Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    className="full-width mt-2"
-                                    placeholder="Enter surgeon name"
-                                    value={prepFormData.surgeonName}
-                                    onChange={(e) => setPrepFormData({ ...prepFormData, surgeonName: e.target.value })}
-                                    list="doctors-list"
-                                    required
-                                />
-                                <datalist id="doctors-list">
-                                    {doctors.map((doc, idx) => (
-                                        <option key={idx} value={doc} />
-                                    ))}
-                                </datalist>
-                                <label className="mt-2">
-                                    <MapPin size={16} />
-                                    Operating Room
-                                </label>
-                                <input
-                                    type="text"
-                                    className="full-width mt-2"
-                                    placeholder="e.g., OT-1, OT-2"
-                                    value={prepFormData.operatingRoom}
-                                    onChange={(e) => setPrepFormData({ ...prepFormData, operatingRoom: e.target.value })}
-                                />
-                            </div>
-
-                            <div className="modal-footer">
-                                <button type="button" className="cancel-btn" onClick={() => setShowPrepModal(false)}>
-                                    Cancel
-                                </button>
-                                <button type="submit" className="submit-btn">
-                                    Save Preparation
-                                </button>
-                            </div>
-                        </form>
-                    </motion.div>
-                </div>
-            )}
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

@@ -169,7 +169,7 @@ const DashboardSection = ({ dashboardStats, hospitalData, setCurrentPage, loadin
               </tr>
             </thead>
             <tbody>
-              {hospitalData.slice(0, 5).map(hospital => (
+              {(hospitalData || []).slice(0, 5).map(hospital => (
                 <tr key={hospital._id} className="cursor-pointer group" onClick={() => setCurrentPage('hospitals')}>
                   <td className="hospital-name">
                     <div className="flex items-center gap-3">
@@ -285,7 +285,7 @@ const HospitalsSection = ({
 
         {(activeTab === 'all' || activeTab === 'emergency' || (activeTab === 'region' && filters.state) || (activeTab === 'specialization' && filters.specialization)) && (
           <div className="hospitals-list-container">
-            {hospitalData.map(hospital => (
+            {(hospitalData || []).map(hospital => (
               <div key={hospital._id} onClick={() => onHospitalClick && onHospitalClick(hospital._id)}>
                 <AdminHospitalCard hospital={hospital} />
               </div>
@@ -1015,8 +1015,9 @@ const AdminDashboard = ({ onLogout }) => {
       }
 
       const response = await apiService.getHospitals(queryFilters)
-      setHospitalData(response.data.hospitals)
+      setHospitalData(response.data?.hospitals || [])
     } catch (err) {
+      console.error(err);
       setError(err.message)
     } finally {
       setLoading(false)

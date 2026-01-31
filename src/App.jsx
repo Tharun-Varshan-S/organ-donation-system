@@ -10,6 +10,8 @@ import Register from './pages/Register';
 import AdminDashboard from './pages/AdminDashboard';
 import DonorDashboard from './pages/DonorDashboard';
 import HospitalDashboard from './pages/HospitalDashboard';
+import HospitalDetailPage from './pages/HospitalDetailPage';
+import RequestDetail from './pages/hospital/RequestDetail';
 
 const App = () => {
   return (
@@ -24,8 +26,10 @@ const App = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/hospitals/:id" element={<HospitalDetailPage />} />
             <Route path="/donor-dashboard" element={<DonorDashboard />} />
             <Route path="/hospital-dashboard" element={<HospitalDashboard />} />
+            <Route path="/hospital/requests/:requestId" element={<RequestDetail />} />
           </Routes>
         </div>
       </BrowserRouter>
