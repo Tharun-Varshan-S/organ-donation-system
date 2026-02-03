@@ -41,7 +41,7 @@ import {
   hospitalRegister,
   hospitalLogin
 } from '../controllers/authController.js';
-import { protectHospital, hospitalOnly, ensureApproved } from '../middleware/auth.js';
+import { protect, protectHospital, hospitalOnly, ensureApproved } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -90,7 +90,7 @@ router.route('/requests')
 
 router.get('/requests/:id', protectHospital, hospitalOnly, ensureApproved, getRequestById);
 router.put('/applications/:id', protectHospital, hospitalOnly, ensureApproved, updateApplicationStatus);
-router.post('/requests/:id/apply', applyToRequest);
+router.post('/requests/:id/apply', protect, applyToRequest);
 
 // @route   GET / PUT /api/hospital/transplants
 router.get('/transplants', protectHospital, hospitalOnly, ensureApproved, getHospitalTransplants);

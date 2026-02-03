@@ -74,3 +74,13 @@ npm run build
 - All white text on light backgrounds has been changed to black for better visibility
 - White text on dark backgrounds (navbar, footer) remains white as intended
 - The application uses a context-based authentication system
+
+
+## 📚 System Documentation
+
+For detailed information about the system architecture, workflows, and features, please refer to the following documents:
+
+- **[System Workflow](SYSTEM_WORKFLOW.md)**: Complete overview of the organ transplant lifecycle.
+- **[Feature List](FINALIZED_FEATURE_LIST.md)**: Comprehensive list of all base and enhanced features.
+- **[Enhanced Features](ENHANCED_FEATURES_DOCUMENTATION.md)**: Technical documentation of the advanced modules.
+- **[Quick Reference](QUICK_REFERENCE_SUMMARY.md)**: At-a-glance summary for administrators and developers.

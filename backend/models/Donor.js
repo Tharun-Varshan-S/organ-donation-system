@@ -39,7 +39,7 @@ const donorSchema = new mongoose.Schema({
     enum: ['active', 'inactive', 'deceased', 'matched'],
     default: 'active'
   },
-    registeredHospital: {
+  registeredHospital: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Hospital'
   },

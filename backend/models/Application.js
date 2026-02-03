@@ -6,10 +6,24 @@ const applicationSchema = new mongoose.Schema({
         ref: 'Request',
         required: true
     },
+    type: {
+        type: String,
+        default: 'APPLICATION'
+    },
+    relatedEntity: {
+        model: {
+            type: String,
+            enum: ['Donor']
+        },
+        id: {
+            type: mongoose.Schema.Types.ObjectId,
+            refPath: 'relatedEntity.model'
+        }
+    },
     donor: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Donor',
-        required: false // Optional if it's a registered User
+        required: false
     },
     user: {
         type: mongoose.Schema.Types.ObjectId,
@@ -18,11 +32,11 @@ const applicationSchema = new mongoose.Schema({
     },
     medicalHistory: {
         type: String,
-        required: true
+        required: false
     },
     lifestyleData: {
         type: String,
-        required: true
+        required: false
     },
     consentSigned: {
         type: Boolean,
@@ -31,7 +45,7 @@ const applicationSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'reviewed', 'accepted', 'rejected'],
+        enum: ['pending', 'reviewed', 'accepted', 'rejected', 'APPROVED'],
         default: 'pending'
     },
     reviewedBy: {
@@ -45,9 +59,9 @@ const applicationSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Ensure either donor or user is provided
+// Ensure either donor, user, or relatedEntity is provided
 applicationSchema.pre('validate', function (next) {
-    if (!this.donor && !this.user) {
+    if (!this.donor && !this.user && !this.relatedEntity?.id) {
         next(new Error('Application must be linked to either a Donor or a User'));
     } else {
         next();
