@@ -8,6 +8,7 @@ import Doctor from '../models/Doctor.js';
 import AuditLog from '../models/AuditLog.js';
 import Notification from '../models/Notification.js';
 import Application from '../models/Application.js';
+import Consent from '../models/Consent.js';
 import User from '../models/User.js';
 import { ErrorResponse, asyncHandler } from '../middleware/error.js';
 
@@ -1328,11 +1329,24 @@ const handleDonorSelection = asyncHandler(async (req, res) => {
   if (action === 'approve') {
     request.status = 'matched';
     request.matchedDonor = donorId; // Note: If user source, this works because both use Mongodb collection
+    request.consentStatus = 'pending'; // Ensure consent is pending
     request.lifecycle.push({
       stage: 'matched',
       timestamp: new Date(),
       notes: `Donor ${donorId} selected from ${donorSource}. Reason: ${reason || 'Optimal medical match'}`
     });
+
+    // Create Consent Record
+    const consentData = {
+      request: request._id,
+      status: 'pending'
+    };
+    if (donorSource === 'donor') {
+      consentData.donor = donorId;
+    } else {
+      consentData.user = donorId;
+    }
+    await Consent.create(consentData);
 
     // Update Donor Status to Assigned/Matched
     if (donorSource === 'donor') {
@@ -1590,7 +1604,7 @@ const applyToRequest = asyncHandler(async (req, res) => {
   }
 
   // Check if already applied
-  const existingApp = await Application.findOne({
+  let application = await Application.findOne({
     request: req.params.id,
     $or: [
       { user: req.user?.id },
@@ -1598,18 +1612,38 @@ const applyToRequest = asyncHandler(async (req, res) => {
     ]
   });
 
-  if (existingApp) {
-    throw new ErrorResponse('You have already applied for this request', 400);
+  if (application) {
+    // UPDATE existing application instead of erroring
+    if (medicalHistory) application.medicalHistory = medicalHistory;
+    if (lifestyleData) application.lifestyleData = lifestyleData;
+    application.consentSigned = true;
+
+    // If the application was auto-created (APPROVED) or pending, we keep/update it.
+    // We do NOT reset status to pending if it was APPROVED.
+
+    await application.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Application updated successfully',
+      data: application
+    });
   }
 
-  const application = await Application.create({
+  // Create new if not exists
+  application = await Application.create({
     request: req.params.id,
     user: req.user?.id,
     donor: req.donor?.id,
     medicalHistory,
     lifestyleData,
     consentSigned,
-    status: 'pending'
+    status: 'pending',
+    type: 'APPLICATION', // Explicitly set type
+    relatedEntity: {      // Explicitly set relatedEntity for hospital visibility
+      model: 'Donor',
+      id: req.user?.id || req.donor?.id
+    }
   });
 
   // Notify Hospital
