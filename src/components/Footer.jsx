@@ -15,7 +15,7 @@ const Footer = () => {
               Connecting donors with recipients to save lives through a seamless, transparent platform.
             </p>
           </div>
-          
+
           <div>
             <h3 className="text-white font-bold mb-4">Quick Links</h3>
             <ul className="space-y-2">
@@ -25,7 +25,7 @@ const Footer = () => {
               <li><a href="#" className="text-gray-300 hover:text-red-600 transition text-sm">FAQ</a></li>
             </ul>
           </div>
-          
+
           <div>
             <h3 className="text-white font-bold mb-4">Resources</h3>
             <ul className="space-y-2">
@@ -35,7 +35,7 @@ const Footer = () => {
               <li><a href="#" className="text-gray-300 hover:text-red-600 transition text-sm">Contact Support</a></li>
             </ul>
           </div>
-          
+
           <div>
             <h3 className="text-white font-bold mb-4">Contact Us</h3>
             <ul className="space-y-3">
@@ -54,7 +54,7 @@ const Footer = () => {
             </ul>
           </div>
         </div>
-        
+
         <div className="border-t border-[#556B73]/30 mt-8 pt-8 text-center">
           <p className="text-gray-400 text-sm">
             © 2026 LifeBridge. All rights reserved. Saving lives through organ donation.
