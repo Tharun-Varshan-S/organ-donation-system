@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users, Activity, Settings, BookOpen, Clock, Shield,
-  ChevronDown, ChevronUp, LogOut, User, Phone, Eye, EyeOff, CheckCircle, AlertCircle, Lock
+  ChevronDown, ChevronUp, LogOut, User, Phone, Eye, EyeOff, CheckCircle, AlertCircle, Lock, Heart, FileText, Send, XCircle
 } from 'lucide-react';
 import { useAuth } from '../landing/contexts/AuthContext';
 import apiService from '../services/api'; // Import API service
@@ -19,6 +19,16 @@ const DonorDashboard = () => {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [confidentialRequests, setConfidentialRequests] = useState([]);
   const [loadingConfidentialRequests, setLoadingConfidentialRequests] = useState(false);
+  const [liveRequests, setLiveRequests] = useState([]);
+  const [loadingLiveRequests, setLoadingLiveRequests] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [applicationForm, setApplicationForm] = useState({
+    medicalHistory: '',
+    lifestyleData: '',
+    consentSigned: false
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Confidential data state
   const [confidentialData, setConfidentialData] = useState({
@@ -96,6 +106,21 @@ const DonorDashboard = () => {
 
       fetchConfidentialRequests();
       fetchConfidentialData();
+    } else if (activeTab === 'live-requests') {
+      const fetchLiveRequests = async () => {
+        setLoadingLiveRequests(true);
+        try {
+          const res = await apiService.getPublicRequests();
+          if (res.success) {
+            setLiveRequests(res.data);
+          }
+        } catch (err) {
+          console.error("Failed to load live requests", err);
+        } finally {
+          setLoadingLiveRequests(false);
+        }
+      };
+      fetchLiveRequests();
     }
   }, [activeTab, user]);
 
@@ -207,6 +232,33 @@ const DonorDashboard = () => {
     }));
   };
 
+  const handleApply = async (e) => {
+    e.preventDefault();
+    if (!applicationForm.medicalHistory || !applicationForm.lifestyleData) {
+      alert("Please complete the medical questionnaire.");
+      return;
+    }
+
+    if (!applicationForm.consentSigned) {
+      alert("You must sign the legal consent to proceed.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await apiService.applyToRequest(selectedRequest._id, applicationForm);
+      if (res.success) {
+        alert("Application submitted successfully. The hospital will review your profile.");
+        setShowApplyModal(false);
+        setActiveTab('history'); // Redirect to history to see pending application
+      }
+    } catch (err) {
+      alert(err.message || "Failed to submit application.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="donor-dashboard">
       {/* Sidebar */}
@@ -218,6 +270,7 @@ const DonorDashboard = () => {
         <nav className="sidebar-nav">
           {[
             { id: 'profile', icon: Users, label: 'My Profile' },
+            { id: 'live-requests', icon: Heart, label: 'Live Requests' },
             { id: 'history', icon: Clock, label: 'Donation History' },
             { id: 'confidential', icon: Lock, label: 'Confidential Data' },
             { id: 'education', icon: BookOpen, label: 'Education Center' },
@@ -682,6 +735,131 @@ const DonorDashboard = () => {
               <h2 className="section-title">Privacy & Settings</h2>
               <div className="content-card">
                 <p className="text-sm text-[#64748b]">Advanced account settings and data download options will appear here.</p>
+              </div>
+            </div>
+          )}
+
+          {/* LIVE REQUESTS SECTION */}
+          {activeTab === 'live-requests' && (
+            <div className="animate-fade-in">
+              <h2 className="section-title">Live Organ Requests</h2>
+              <p className="section-subtitle">Urgent medical requirements awaiting compatible donors</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-6">
+                {loadingLiveRequests ? (
+                  <p>Loading live requests...</p>
+                ) : liveRequests.length > 0 ? (
+                  liveRequests.map((req) => (
+                    <div key={req._id} className="live-request-card">
+                      <div className="req-header">
+                        <span className="organ-type-badge">{req.organType}</span>
+                        <span className={`urgency-pill ${req.patient?.urgencyLevel}`}>
+                          {req.patient?.urgencyLevel}
+                        </span>
+                      </div>
+                      <div className="req-body">
+                        <div className="hospital-info">
+                          <Activity size={14} className="text-blue-500" />
+                          <span>{req.hospital?.name || 'Authorized Hospital'}</span>
+                        </div>
+                        <div className="patient-snippet">
+                          <p className="text-sm font-bold text-slate-800">Recipient Blood Type: <span className="text-red-600">{req.patient?.bloodType}</span></p>
+                          <p className="text-xs text-slate-500 mt-1">Location: {req.hospital?.location?.city || 'Local Area'}</p>
+                        </div>
+                        <div className="req-footer mt-6">
+                          <button
+                            className="apply-btn-sm"
+                            onClick={() => {
+                              setSelectedRequest(req);
+                              setShowApplyModal(true);
+                            }}
+                          >
+                            Express Interest
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-full py-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-100">
+                    <Heart size={48} className="mx-auto text-slate-200 mb-4" />
+                    <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No Active Match Requirements Found</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* APPLICATION MODAL */}
+          {showApplyModal && selectedRequest && (
+            <div className="modal-overlay">
+              <div className="modal-container max-w-2xl bg-white rounded-[2rem] shadow-2xl overflow-hidden p-8 animate-fade-in">
+                <div className="flex justify-between items-center mb-8">
+                  <h3 className="text-xl font-black text-slate-800 tracking-tight uppercase">Medical Questionnaire</h3>
+                  <button onClick={() => setShowApplyModal(false)} className="p-2 hover:bg-slate-50 rounded-full">
+                    <XCircle size={24} className="text-slate-300" />
+                  </button>
+                </div>
+
+                <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl text-blue-800 text-xs font-bold leading-relaxed mb-8 flex gap-3">
+                  <Shield className="shrink-0 text-blue-500" size={16} />
+                  <p>Your application includes sharing your clinical profile with {selectedRequest.hospital?.name}. Please complete the mandatory questionnaire to establish suitability.</p>
+                </div>
+
+                <form onSubmit={handleApply} className="space-y-6">
+                  <div className="form-group">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Comprehensive Medical History *</label>
+                    <textarea
+                      className="form-input mt-2 min-h-[120px] bg-slate-50 border-2 border-slate-50 focus:border-blue-500 focus:bg-white transition-all rounded-2xl"
+                      placeholder="Detail any past surgeries, chronic conditions, or medications..."
+                      required
+                      value={applicationForm.medicalHistory}
+                      onChange={(e) => setApplicationForm({ ...applicationForm, medicalHistory: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Lifestyle & Habit Disclosure *</label>
+                    <textarea
+                      className="form-input mt-2 min-h-[120px] bg-slate-50 border-2 border-slate-50 focus:border-blue-500 focus:bg-white transition-all rounded-2xl"
+                      placeholder="Detail smoking/alcohol habits, physical activity level, etc..."
+                      required
+                      value={applicationForm.lifestyleData}
+                      onChange={(e) => setApplicationForm({ ...applicationForm, lifestyleData: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="flex items-start gap-3 p-5 bg-slate-50 rounded-2xl border border-slate-100 mb-4 transition-all hover:bg-white hover:border-emerald-200 group">
+                    <input
+                      type="checkbox"
+                      id="legalConsent"
+                      className="w-5 h-5 mt-0.5 accent-emerald-600 transition-transform group-hover:scale-110"
+                      checked={applicationForm.consentSigned}
+                      onChange={(e) => setApplicationForm({ ...applicationForm, consentSigned: e.target.checked })}
+                      required
+                    />
+                    <label htmlFor="legalConsent" className="text-[11px] font-bold text-slate-600 leading-relaxed uppercase tracking-wider cursor-pointer">
+                      I hereby declare that the medical information provided is accurate and I provide my informed consent for clinical matching and surgical allocation.
+                    </label>
+                  </div>
+
+                  <div className="flex gap-4 pt-4">
+                    <button
+                      type="button"
+                      className="flex-1 py-4 font-black uppercase tracking-widest text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                      onClick={() => setShowApplyModal(false)}
+                    >
+                      Abort
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-emerald-200 active:scale-95 transition-all flex items-center justify-center gap-2"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? 'Transmitting...' : <><Send size={14} /> Submit Application</>}
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           )}

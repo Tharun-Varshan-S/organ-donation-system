@@ -20,19 +20,28 @@ import {
   getHospitalAnalytics,
   getPublicDonors,
   validateEligibility,
+  giveConsent,
   getDonorProfile,
   getDoctors,
   addDoctor,
   updateDoctor,
   removeDoctor,
   requestConfidentialData,
-  getConfidentialDonorData
+  getConfidentialDonorData,
+  validatePatient,
+  getPotentialMatches,
+  handleDonorSelection,
+  createOperationRecord,
+  getRequestById,
+  updateApplicationStatus,
+  applyToRequest,
+  getPublicRequests
 } from '../controllers/hospitalController.js';
 import {
   hospitalRegister,
   hospitalLogin
 } from '../controllers/authController.js';
-import { protectHospital, hospitalOnly, ensureApproved } from '../middleware/auth.js';
+import { protect, protectHospital, hospitalOnly, ensureApproved } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -43,6 +52,8 @@ router.post('/register', hospitalRegister);
 
 // @route   POST /api/hospital/login
 router.post('/login', hospitalLogin);
+
+router.get('/requests/public', getPublicRequests);
 
 // Protected & Approved Routes Middleware Wrapper (Optional, but defining individually is clearer)
 
@@ -77,6 +88,10 @@ router.route('/requests')
   .get(protectHospital, hospitalOnly, ensureApproved, getHospitalRequests)
   .post(protectHospital, hospitalOnly, ensureApproved, createHospitalRequest);
 
+router.get('/requests/:id', protectHospital, hospitalOnly, ensureApproved, getRequestById);
+router.put('/applications/:id', protectHospital, hospitalOnly, ensureApproved, updateApplicationStatus);
+router.post('/requests/:id/apply', protect, applyToRequest);
+
 // @route   GET / PUT /api/hospital/transplants
 router.get('/transplants', protectHospital, hospitalOnly, ensureApproved, getHospitalTransplants);
 router.put('/transplants/:id', protectHospital, hospitalOnly, ensureApproved, updateTransplantStatus);
@@ -85,9 +100,16 @@ router.put('/transplants/:id/outcome', protectHospital, hospitalOnly, ensureAppr
 // @route   PUT /api/hospital/requests/:id/sla-breach
 router.put('/requests/:id/sla-breach', protectHospital, hospitalOnly, ensureApproved, captureSLABreach);
 router.put('/requests/:id/validate-eligibility', protectHospital, hospitalOnly, ensureApproved, validateEligibility);
+router.put('/requests/:id/give-consent', protectHospital, hospitalOnly, ensureApproved, giveConsent);
 
 // @route   GET /api/hospital/donors/:id/timeline
 router.get('/donors/:id/timeline', protectHospital, hospitalOnly, ensureApproved, getDonorTimeline);
+
+// Patient Validation & Matching
+router.post('/patients/validate', protectHospital, hospitalOnly, ensureApproved, validatePatient);
+router.get('/requests/:id/potential-matches', protectHospital, hospitalOnly, ensureApproved, getPotentialMatches);
+router.post('/requests/:id/select-donor', protectHospital, hospitalOnly, ensureApproved, handleDonorSelection);
+router.post('/transplants/operation', protectHospital, hospitalOnly, ensureApproved, createOperationRecord);
 
 // @route   GET / POST / PUT / DELETE /api/hospital/doctors
 router.route('/doctors')

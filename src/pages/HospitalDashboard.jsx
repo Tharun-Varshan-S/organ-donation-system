@@ -4,6 +4,7 @@ import {
   XCircle, Filter, Home, LayoutDashboard, ClipboardList,
   UserCircle, Settings, LogOut, Bell, Menu, X, ShieldAlert, Stethoscope, ChevronRight
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api';
@@ -27,6 +28,7 @@ import { EmergencyBanner, GlassCard } from './hospital/HospitalDashboardTabs/Das
 
 const HospitalDashboard = () => {
   const { user, logout, showApprovalMessage, setShowApprovalMessage } = useAuth();
+  const navigate = useNavigate();
 
   // State
   const [activeTab, setActiveTab] = useState('overview');
@@ -303,13 +305,18 @@ const HospitalDashboard = () => {
         <main className="p-6 lg:p-10 max-w-7xl mx-auto">
 
           {/* Emergency Banner (Conditional) */}
-          {(requests.some(r => r.urgency === 'emergency') || stats?.emergencyCount > 0) && (
-            <EmergencyBanner
-              message="Critical Organ Requests Pending Approval"
-              count={stats?.emergencyCount || 2}
-              onClick={() => setActiveTab('requests')}
-            />
-          )}
+          <AnimatePresence>
+            {stats?.criticalRequests?.length > 0 && (
+              <EmergencyBanner
+                message={`${stats.criticalRequests[0].patient.name} (${stats.criticalRequests[0].organType?.toUpperCase()}) - ALPHA MATCH REQUIRED`}
+                count={stats.criticalRequests.length}
+                onClick={() => {
+                  const firstCriticalId = stats.criticalRequests[0]._id;
+                  navigate(`/hospital/requests/${firstCriticalId}`);
+                }}
+              />
+            )}
+          </AnimatePresence>
 
           <header className="mb-10">
             <div className="flex items-center gap-3 text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">

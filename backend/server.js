@@ -11,12 +11,14 @@ import { errorHandler, notFound } from './middleware/error.js';
 // Route imports
 import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
-import hospitalRoutes from './routes/hospitals.js';
-import legacyHospitalRoutes from './routes/hospital.js';
-import generalRoutes from './routes/route.js';
+import hospitalRoutes from './routes/hospital.js';
 import userRoutes from './routes/user.js';
+import generalRoutes from './routes/route.js';
 
 dotenv.config();
+
+// ... (Env loading logic remains same, skipping lines 21-38 to minimize diff, but since I am replacing the block I need to include context or just replace the imports and mounts)
+// Actually, I will targeting the imports block first.
 
 // Optional local dev config file (fallback when `.env` files are blocked/ignored)
 // Create: `backend/config/local.env.json`
@@ -88,14 +90,23 @@ app.get('/api/health', (req, res) => {
 });
 
 // API Routes
+app.use('/api/admin', authRoutes); // Login/Register for admins (if handled there) OR usually auth.js handles it. 
+// Wait, previous file had app.use('/api/admin', authRoutes).
+// But authRoutes might be just generic? 
+// The user said: "authController -> login/register only".
+// Let's stick to the user's requested order but ensure /api/admin is adminRoutes.
+// Line 91 was app.use('/api/admin', authRoutes);
+// Line 92 was app.use('/api/admin', adminRoutes);
+// This seems to imply authRoutes has /login and adminRoutes has /dashboard.
+// I will preserve this structure but clean it up.
+
 app.use('/api/admin', authRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Hospital Dashboard & Management API (Singular)
-app.use('/api/hospital', legacyHospitalRoutes);
+// Hospital Routes (Single Router Source)
+app.use('/api/hospital', hospitalRoutes); // Dashboard, Management
+app.use('/api/hospitals', hospitalRoutes); // Public Directory
 
-// Public Hospital Directory (Plural)
-app.use('/api/hospitals', hospitalRoutes);
 app.use('/api/users', userRoutes);
 
 if (generalRoutes) app.use('/', generalRoutes);

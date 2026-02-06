@@ -3,7 +3,9 @@ import Admin from '../models/Admin.js';
 import Hospital from '../models/Hospital.js';
 import User from '../models/User.js';
 import Request from '../models/Request.js';
+import Consent from '../models/Consent.js';
 import AuditLog from '../models/AuditLog.js';
+import Application from '../models/Application.js';
 
 // Generate JWT Token
 const generateToken = (id, role) => {
@@ -378,48 +380,145 @@ export const getUserHistory = async (req, res) => {
   }
 };
 
+// @desc    Get Pending Match Requests for Donor
+// @route   GET /api/users/pending-matches
+// @access  Private (User/Donor)
+export const getPendingMatchRequests = async (req, res) => {
+  try {
+    // Find consents for this user with pending status
+    const pendingConsents = await Consent.find({
+      user: req.user.id,
+      status: 'pending'
+    }).populate({
+      path: 'request',
+      select: 'requestId patient.age patient.gender patient.medicalCondition organType hospital',
+      populate: {
+        path: 'hospital',
+        select: 'name location'
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      count: pendingConsents.length,
+      data: pendingConsents.map(c => ({
+        consentId: c._id,
+        request: c.request,
+        requestedAt: c.createdAt
+      }))
+    });
+  } catch (error) {
+    console.error('Get Pending Matches Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 // @desc    Provide Donor Consent for a Match
 // @route   PUT /api/users/consent/:requestId
 // @access  Private (Donor/User)
 export const provideConsent = async (req, res) => {
   try {
     const { requestId } = req.params;
-    const { consent } = req.body; // 'given' or 'denied'
+    const { consent, rejectionReason } = req.body; // 'approved' or 'rejected'
 
-    if (!['given', 'denied'].includes(consent)) {
-      return res.status(400).json({ success: false, message: 'Invalid consent value' });
+    // Normalize input
+    const status = consent === 'given' ? 'approved' : (consent === 'denied' ? 'rejected' : consent);
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid consent value. Use approved or rejected.' });
     }
 
-    const request = await Request.findOne({
-      requestId: requestId,
-      matchedDonor: req.user.id,
-      status: 'matched'
+    if (status === 'rejected' && !rejectionReason) {
+      return res.status(400).json({ success: false, message: 'Rejection reason is mandatory.' });
+    }
+
+    // Find the Consent record
+    const consentRecord = await Consent.findOne({
+      request: requestId,
+      user: req.user.id,
+      status: 'pending'
     });
 
+    if (!consentRecord) {
+      return res.status(404).json({ success: false, message: 'Pending consent record not found' });
+    }
+
+    const request = await Request.findById(requestId);
     if (!request) {
-      return res.status(404).json({ success: false, message: 'Matched request not found for this donor' });
+      return res.status(404).json({ success: false, message: 'Request not found' });
     }
 
-    request.consentStatus = consent;
+    // Update Consent Record
+    consentRecord.status = status;
+    consentRecord.respondedAt = new Date();
+    if (status === 'rejected') {
+      consentRecord.rejectionReason = rejectionReason;
+    }
+    await consentRecord.save();
+
+    // Update Request
+    request.consentStatus = status === 'approved' ? 'given' : 'denied';
     request.lifecycle.push({
-      stage: 'consent_given',
+      stage: status === 'approved' ? 'consent_given' : 'matched', // If denied, maybe revert or just log
       timestamp: new Date(),
-      notes: `Donor consent ${consent}`
+      notes: `Donor consent ${status}. ${rejectionReason ? 'Reason: ' + rejectionReason : ''}`
     });
+
+    // If approved, notify hospital (system event/notification)
+    // If rejected, maybe unmatch or notify hospital
+    if (status === 'rejected') {
+      // Optional: Revert match status?
+      // The user prompt says "No transplant flow without donor consent".
+      // So keeping it as matched but consent denied effectively blocks it.
+    }
+
+    // AUTOMATIC APPLICATION CREATION (Enhancement)
+    if (status === 'approved') {
+      const existingApp = await Application.findOne({
+        request: request._id,
+        user: req.user.id
+      });
+
+      if (!existingApp) {
+        await Application.create({
+          request: request._id,
+          type: "APPLICATION",
+          status: "APPROVED",
+          relatedEntity: {
+            model: "Donor",
+            id: req.user.id
+          },
+          user: req.user.id,
+          consentSigned: true
+        });
+      } else {
+        // Ensure existing app is visible
+        if (existingApp.status !== 'APPROVED') {
+          existingApp.status = 'APPROVED';
+        }
+        existingApp.consentSigned = true;
+        // Ensure type and relatedEntity are set correctly if they were missing (migration fix)
+        if (!existingApp.type) existingApp.type = "APPLICATION";
+        if (!existingApp.relatedEntity || !existingApp.relatedEntity.id) {
+          existingApp.relatedEntity = { model: "Donor", id: req.user.id };
+        }
+        await existingApp.save();
+      }
+    }
 
     await request.save();
 
     await AuditLog.create({
       actionType: 'CONSENT_RECORD',
       performedBy: { id: req.user.id, name: req.user.name, role: 'User' },
-      entityType: 'REQUEST',
-      entityId: request._id,
-      details: `Consent ${consent} by donor for request ${request.requestId}`
+      entityType: 'CONSENT',
+      entityId: consentRecord._id,
+      details: `Consent ${status} by donor for request ${request.requestId}`
     });
 
     res.status(200).json({
       success: true,
-      message: `Consent successfully ${consent}`,
+      message: `Consent successfully ${status}`,
       data: request
     });
   } catch (error) {
