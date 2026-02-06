@@ -24,7 +24,9 @@ import {
   getDoctors,
   addDoctor,
   updateDoctor,
-  removeDoctor
+  removeDoctor,
+  requestConfidentialData,
+  getConfidentialDonorData
 } from '../controllers/hospitalController.js';
 import {
   hospitalRegister,

@@ -612,22 +612,3 @@ export const getConfidentialData = async (req, res) => {
   }
 };
 
-export {
-  adminRegister,
-  adminLogin,
-  getAdminProfile,
-  hospitalRegister,
-  hospitalLogin,
-  getPublicHospitals,
-  getPublicHospitalById,
-  userRegister,
-  userLogin,
-  getUserProfile,
-  updateUserProfile,
-  getUserHistory,
-  provideConsent,
-  getDonorConfidentialRequests,
-  respondToConfidentialRequest,
-  updateConfidentialData,
-  getConfidentialData
-};

@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-
 const requestSchema = new mongoose.Schema({
   requestId: {
     type: String,
