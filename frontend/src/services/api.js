@@ -379,6 +379,13 @@ class ApiService {
     return this.handleResponse(response)
   }
 
+  async getRecipientSummary(year) {
+    const response = await fetch(`${API_BASE_URL}/users/recipient-summary?year=${year}`, {
+      headers: this.getAuthHeaders('user')
+    })
+    return this.handleResponse(response)
+  }
+
   logout() {
     this.setAdminToken(null)
     this.setHospitalToken(null)

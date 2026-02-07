@@ -10,7 +10,8 @@ import {
     respondToConfidentialRequest,
     updateConfidentialData,
     getConfidentialData,
-    getPendingMatchRequests
+    getPendingMatchRequests,
+    getRecipientSummary
 } from '../controllers/authController.js';
 import { protect } from '../middleware/auth.js'; // Assuming auth middleware exists
 
@@ -29,6 +30,7 @@ router.get('/:id/confidential-requests', protect, getDonorConfidentialRequests);
 router.put('/confidential-requests/:requestId/respond', protect, respondToConfidentialRequest);
 router.put('/confidential-data', protect, updateConfidentialData);
 router.get('/confidential-data', protect, getConfidentialData);
+router.get('/recipient-summary', protect, getRecipientSummary);
 
 export default router;
 

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../landing/contexts/AuthContext';
 import apiService from '../services/api'; // Import API service
+import RecipientSummary from '../components/RecipientSummary';
 import './DonorDashboard.css';
 
 const DonorDashboard = () => {
@@ -272,6 +273,7 @@ const DonorDashboard = () => {
             { id: 'profile', icon: Users, label: 'My Profile' },
             { id: 'live-requests', icon: Heart, label: 'Live Requests' },
             { id: 'history', icon: Clock, label: 'Donation History' },
+            { id: 'impact', icon: Activity, label: 'Recipient Impact' },
             { id: 'confidential', icon: Lock, label: 'Confidential Data' },
             { id: 'education', icon: BookOpen, label: 'Education Center' },
             { id: 'settings', icon: Settings, label: 'Privacy & Settings' }
@@ -788,6 +790,11 @@ const DonorDashboard = () => {
                 )}
               </div>
             </div>
+          )}
+
+          {/* RECIPIENT IMPACT SECTION */}
+          {activeTab === 'impact' && (
+            <RecipientSummary />
           )}
 
           {/* APPLICATION MODAL */}

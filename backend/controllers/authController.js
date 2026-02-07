@@ -6,6 +6,7 @@ import Request from '../models/Request.js';
 import Consent from '../models/Consent.js';
 import AuditLog from '../models/AuditLog.js';
 import Application from '../models/Application.js';
+import Transplant from '../models/Transplant.js';
 
 // Generate JWT Token
 const generateToken = (id, role) => {
@@ -711,3 +712,58 @@ export const getConfidentialData = async (req, res) => {
   }
 };
 
+
+// @desc    Get Annual Recipient Summary
+// @route   GET /api/users/recipient-summary
+// @access  Private (Donor/User)
+export const getRecipientSummary = async (req, res) => {
+  try {
+    const year = parseInt(req.query.year) || new Date().getFullYear();
+    const startDate = new Date(`${year}-01-01`);
+    const endDate = new Date(`${year}-12-31T23:59:59.999Z`);
+
+    const matchStage = {
+      status: 'completed',
+      $or: [
+        { 'surgeryDetails.actualDate': { $gte: startDate, $lte: endDate } },
+        { surgeryDate: { $gte: startDate, $lte: endDate } } // Fallback
+      ]
+    };
+
+    const summary = await Transplant.aggregate([
+      { $match: matchStage },
+      {
+        $facet: {
+          totalCount: [{ $count: 'count' }],
+          byOrgan: [
+            { $group: { _id: '$organType', count: { $sum: 1 } } }
+          ],
+          byMonth: [
+            {
+              $group: {
+                _id: { $month: { $ifNull: ['$surgeryDetails.actualDate', '$surgeryDate'] } },
+                count: { $sum: 1 }
+              }
+            },
+            { $sort: { _id: 1 } }
+          ]
+        }
+      }
+    ]);
+
+    const result = {
+      year,
+      total: summary[0].totalCount[0] ? summary[0].totalCount[0].count : 0,
+      byOrgan: summary[0].byOrgan.reduce((acc, curr) => ({ ...acc, [curr._id]: curr.count }), {}),
+      byMonth: summary[0].byMonth.reduce((acc, curr) => ({ ...acc, [curr._id]: curr.count }), {})
+    };
+
+    res.status(200).json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Get Recipient Summary Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
