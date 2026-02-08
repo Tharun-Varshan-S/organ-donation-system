@@ -20,6 +20,8 @@ import {
 } from '../controllers/adminController.js';
 
 import { protect, adminOnly } from '../middleware/auth.js';
+import validateRequest from '../middleware/validateRequest.js';
+import { adminSchemas } from '../utils/validationSchemas.js';
 
 const router = express.Router();
 
@@ -36,7 +38,7 @@ router.get('/hospitals/:id', getHospitalDetails);
 router.put('/hospitals/:id/approve', approveHospital);
 router.put('/hospitals/:id/suspend', suspendHospital);
 router.put('/hospitals/:id/reject', rejectHospital);
-router.put('/hospitals/:id/status', updateHospitalStatus);
+router.put('/hospitals/:id/status', validateRequest(adminSchemas.updateHospitalStatus), updateHospitalStatus);
 
 // Donor & Analytics routes
 router.get('/donors', getDonors);
@@ -53,7 +55,7 @@ router.get('/reports', getSystemReports);
 
 // Settings
 router.get('/settings', getSettings);
-router.put('/settings', updateSettings);
+router.put('/settings', validateRequest(adminSchemas.updateSettings), updateSettings);
 
 export default router;
 

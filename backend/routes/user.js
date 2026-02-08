@@ -13,14 +13,16 @@ import {
     getPendingMatchRequests,
     getRecipientSummary
 } from '../controllers/authController.js';
-import { protect } from '../middleware/auth.js'; // Assuming auth middleware exists
+import { protect } from '../middleware/auth.js';
+import validateRequest from '../middleware/validateRequest.js';
+import { userSchemas } from '../utils/validationSchemas.js';
 
 const router = express.Router();
 
-router.post('/register', userRegister);
-router.post('/login', userLogin);
+router.post('/register', validateRequest(userSchemas.register), userRegister);
+router.post('/login', validateRequest(userSchemas.login), userLogin);
 router.get('/profile', protect, getUserProfile);
-router.put('/profile', protect, updateUserProfile);
+router.put('/profile', protect, validateRequest(userSchemas.updateProfile), updateUserProfile);
 router.get('/history', protect, getUserHistory);
 router.get('/pending-matches', protect, getPendingMatchRequests);
 router.put('/consent/:requestId', protect, provideConsent);

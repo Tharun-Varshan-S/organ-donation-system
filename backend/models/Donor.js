@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { encrypt, decrypt } from '../utils/encryption.js';
 
 const donorSchema = new mongoose.Schema({
   personalInfo: {
@@ -49,22 +50,22 @@ const donorSchema = new mongoose.Schema({
   },
   confidentialData: {
     pii: {
-      fullName: String,
-      governmentId: String,
+      fullName: { type: String, get: decrypt, set: encrypt },
+      governmentId: { type: String, get: decrypt, set: encrypt },
       dateOfBirthExact: Date,
       genderExact: String,
       photograph: String,
     },
     contactInfo: {
-      phoneNumber: String,
-      emailAddress: String,
-      emergencyContact: String,
-      alternateContacts: [String],
+      phoneNumber: { type: String, get: decrypt, set: encrypt },
+      emailAddress: { type: String, get: decrypt, set: encrypt },
+      emergencyContact: { type: String, get: decrypt, set: encrypt },
+      alternateContacts: [{ type: String, get: decrypt, set: encrypt }],
     },
     preciseLocation: {
-      fullHomeAddress: String,
-      pinCode: String,
-      gpsCoordinates: String,
+      fullHomeAddress: { type: String, get: decrypt, set: encrypt },
+      pinCode: { type: String, get: decrypt, set: encrypt },
+      gpsCoordinates: { type: String, get: decrypt, set: encrypt },
     },
     detailedMedicalRecords: {
       fullMedicalHistoryReports: [String], // Array of document IDs or URLs
@@ -111,7 +112,9 @@ const donorSchema = new mongoose.Schema({
     },
   ]
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { getters: true },
+  toObject: { getters: true }
 });
 
 export default mongoose.model('Donor', donorSchema);

@@ -42,16 +42,18 @@ import {
   hospitalLogin
 } from '../controllers/authController.js';
 import { protect, protectHospital, hospitalOnly, ensureApproved } from '../middleware/auth.js';
+import validateRequest from '../middleware/validateRequest.js';
+import { hospitalSchemas } from '../utils/validationSchemas.js';
 
 const router = express.Router();
 
 // Public Routes
 router.get('/', getPublicHospitals);
 // @route   POST /api/hospital/register
-router.post('/register', hospitalRegister);
+router.post('/register', validateRequest(hospitalSchemas.register), hospitalRegister);
 
 // @route   POST /api/hospital/login
-router.post('/login', hospitalLogin);
+router.post('/login', validateRequest(hospitalSchemas.login), hospitalLogin);
 
 router.get('/requests/public', getPublicRequests);
 
@@ -63,7 +65,7 @@ router.get('/requests/public', getPublicRequests);
 router.get('/profile', protectHospital, hospitalOnly, getHospitalProfile);
 
 // @route   PUT /api/hospital/profile
-router.put('/profile', protectHospital, hospitalOnly, ensureApproved, updateHospitalProfile);
+router.put('/profile', protectHospital, hospitalOnly, ensureApproved, validateRequest(hospitalSchemas.updateProfile), updateHospitalProfile);
 
 // @route   GET /api/hospital/dashboard
 router.get('/dashboard', protectHospital, hospitalOnly, ensureApproved, getDashboardStats);

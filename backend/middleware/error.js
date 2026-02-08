@@ -22,7 +22,8 @@ const errorHandler = (err, req, res, next) => {
   // Log error for debugging
   console.error('❌ Error:', err);
 
-  let error = err;
+  let error = { ...err };
+  error.message = err.message;
 
   // If error is already an ErrorResponse instance, use it directly
   if (err instanceof ErrorResponse) {
@@ -38,7 +39,7 @@ const errorHandler = (err, req, res, next) => {
     // Extract the field name from the error
     const field = Object.keys(err.keyPattern || err.keyValue || {})[0] || 'field';
     const value = err.keyValue?.[field] || 'value';
-    const message = `Duplicate ${field} value entered: ${value}. Please use another value.`;
+    const message = `Duplicate ${field} value entered. Please use another value.`;
     error = new ErrorResponse(message, 400);
   }
   // Mongoose validation error
@@ -48,6 +49,15 @@ const errorHandler = (err, req, res, next) => {
       .join(', ');
     error = new ErrorResponse(message, 400);
   }
+  // JWT errors
+  else if (err.name === 'JsonWebTokenError') {
+    const message = 'Invalid token. Please log in again.';
+    error = new ErrorResponse(message, 401);
+  }
+  else if (err.name === 'TokenExpiredError') {
+    const message = 'Your token has expired. Please log in again.';
+    error = new ErrorResponse(message, 401);
+  }
   // For other errors, create a generic ErrorResponse if needed
   else {
     error = new ErrorResponse(err.message || 'Server Error', err.statusCode || 500);
@@ -56,7 +66,8 @@ const errorHandler = (err, req, res, next) => {
   // Send error response
   res.status(error.statusCode || 500).json({
     success: false,
-    message: error.message || 'Server Error'
+    message: error.message || 'Server Error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 };
 

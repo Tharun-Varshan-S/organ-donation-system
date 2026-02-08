@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { encrypt, decrypt } from '../utils/encryption.js';
 
 const userSchema = new mongoose.Schema({
     name: {
@@ -60,12 +61,12 @@ const userSchema = new mongoose.Schema({
     }],
     confidentialData: {
         pii: {
-            governmentId: String,
+            governmentId: { type: String, get: decrypt, set: encrypt },
             photograph: String,
         },
         contactInfo: {
-            emergencyContact: String,
-            alternateContacts: [String],
+            emergencyContact: { type: String, get: decrypt, set: encrypt },
+            alternateContacts: [{ type: String, get: decrypt, set: encrypt }],
         },
         detailedMedicalRecords: {
             pastSurgeries: [String],
@@ -93,6 +94,9 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     }
+}, {
+    toJSON: { getters: true },
+    toObject: { getters: true }
 });
 
 // Encrypt password using bcrypt

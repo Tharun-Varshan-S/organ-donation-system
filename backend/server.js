@@ -7,6 +7,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import connectDB from './config/database.js';
 import { errorHandler, notFound } from './middleware/error.js';
+import helmet from 'helmet';
+import mongoSanitize from 'express-mongo-sanitize';
+import xss from 'xss-clean';
+import hpp from 'hpp';
+import sanitizeResponse from './middleware/sanitizeResponse.js';
 
 // Route imports
 import authRoutes from './routes/auth.js';
@@ -17,19 +22,13 @@ import generalRoutes from './routes/route.js';
 
 dotenv.config();
 
-// ... (Env loading logic remains same, skipping lines 21-38 to minimize diff, but since I am replacing the block I need to include context or just replace the imports and mounts)
-// Actually, I will targeting the imports block first.
-
-// Optional local dev config file (fallback when `.env` files are blocked/ignored)
-// Create: `backend/config/local.env.json`
-// Note: `.env` file takes precedence over local.env.json
+// (Skipping env loading logic for brevity, it's already there)
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const localEnvPath = path.join(__dirname, 'config', 'local.env.json');
 try {
   if (fs.existsSync(localEnvPath)) {
     const localEnv = JSON.parse(fs.readFileSync(localEnvPath, 'utf8'));
     for (const [k, v] of Object.entries(localEnv)) {
-      // Only set if not already defined in process.env (from .env file)
       if (v != null && !process.env[k]) {
         process.env[k] = String(v);
       }
@@ -39,34 +38,15 @@ try {
   console.warn(`⚠️  Failed to read ${localEnvPath}: ${e.message}`);
 }
 
-// Connect to database
-// Use await if top-level await is supported, otherwise just call it. 
-// Given the previous error "SyntaxError", standard call is safer unless 
-// we are sure package.json has "type": "module" AND node version supports it.
-// The file has "type": "module" in user's previous steps context.
 await connectDB();
 
 const app = express();
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: {
-    success: false,
-    message: 'Too many requests from this IP, please try again later.'
-  }
-});
-
-// Middleware
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  if (req.method === 'POST' || req.method === 'PUT') {
-    console.log('Body:', JSON.stringify(req.body, null, 2));
-  }
-  next();
-});
-app.use(limiter);
+// Global Middleware
+app.use(helmet());
+app.use(mongoSanitize());
+app.use(xss());
+app.use(hpp());
 app.use(cors({
   origin: [
     process.env.FRONTEND_URL,
@@ -79,56 +59,56 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Health check route
+// Sanitize Response Middleware
+app.use(sanitizeResponse);
+
+// Logging Middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: {
+    success: false,
+    message: 'Too many requests from this IP, please try again later.'
+  }
+});
+app.use('/api', limiter);
+
+// Health check
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Healthcare Backend API is running',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
+    timestamp: new Date().toISOString()
   });
 });
 
 // API Routes
-app.use('/api/admin', authRoutes); // Login/Register for admins (if handled there) OR usually auth.js handles it. 
-// Wait, previous file had app.use('/api/admin', authRoutes).
-// But authRoutes might be just generic? 
-// The user said: "authController -> login/register only".
-// Let's stick to the user's requested order but ensure /api/admin is adminRoutes.
-// Line 91 was app.use('/api/admin', authRoutes);
-// Line 92 was app.use('/api/admin', adminRoutes);
-// This seems to imply authRoutes has /login and adminRoutes has /dashboard.
-// I will preserve this structure but clean it up.
-
 app.use('/api/admin', authRoutes);
 app.use('/api/admin', adminRoutes);
-
-// Hospital Routes (Single Router Source)
-app.use('/api/hospital', hospitalRoutes); // Dashboard, Management
-app.use('/api/hospitals', hospitalRoutes); // Public Directory
-
+app.use('/api/hospital', hospitalRoutes);
+app.use('/api/hospitals', hospitalRoutes);
 app.use('/api/users', userRoutes);
 
 if (generalRoutes) app.use('/', generalRoutes);
 
-// Error handling middleware
+// Error handling
 app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-
 const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
-  console.log(`📡 API Health Check: http://localhost:${PORT}/api/health`);
-  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL}`);
 });
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err, promise) => {
+process.on('unhandledRejection', (err) => {
   console.log(`❌ Unhandled Rejection: ${err.message}`);
-  server.close(() => {
-    process.exit(1);
-  });
+  server.close(() => process.exit(1));
 });
 
 export default app;
