@@ -6,6 +6,7 @@ import AuditLog from '../models/AuditLog.js';
 import Admin from '../models/Admin.js';
 import catchAsync from '../utils/catchAsync.js';
 import { ErrorResponse } from '../middleware/error.js';
+import { sendHospitalApprovalMail } from '../utils/emailHelper.js';
 
 // @desc    Get dashboard statistics
 // @route   GET /api/admin/dashboard/stats
@@ -490,7 +491,11 @@ export const approveHospital = catchAsync(async (req, res) => {
     message: 'Hospital approved successfully',
     data: hospital
   });
+
+  // Background email sending
+  sendHospitalApprovalMail(hospital.email, hospital.name).catch(console.error);
 });
+
 
 // @desc    Suspend hospital
 // @route   PUT /api/admin/hospitals/:id/suspend
@@ -746,7 +751,13 @@ export const updateHospitalStatus = catchAsync(async (req, res) => {
     message: `Hospital ${status} successfully`,
     data: hospital
   });
+
+  // Background email sending if approved
+  if (status === 'approved') {
+    sendHospitalApprovalMail(hospital.email, hospital.name).catch(console.error);
+  }
 });
+
 
 // @desc    Get donor analytics
 // @route   GET /api/admin/analytics/donors

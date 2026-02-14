@@ -9,6 +9,7 @@ import Application from '../models/Application.js';
 import Transplant from '../models/Transplant.js';
 import catchAsync from '../utils/catchAsync.js';
 import { ErrorResponse } from '../middleware/error.js';
+import { sendWelcomeMail, sendHospitalWelcomeMail } from '../utils/emailHelper.js';
 
 // Generate JWT Token
 const generateToken = (id, role) => {
@@ -119,7 +120,11 @@ export const hospitalRegister = catchAsync(async (req, res) => {
     message: 'Registration submitted. Awaiting admin approval.',
     data: { id: hospital._id, status: 'pending' }
   });
+
+  // Background email sending
+  sendHospitalWelcomeMail(hospital.email, hospital.name).catch(console.error);
 });
+
 
 // @desc    Hospital Login
 // @route   POST /api/hospital/login
@@ -248,7 +253,11 @@ export const userRegister = catchAsync(async (req, res) => {
       availabilityStatus: user.availabilityStatus
     }
   });
+
+  // Background email sending
+  sendWelcomeMail(user.email, user.name).catch(console.error);
 });
+
 
 // @desc    User Login
 // @route   POST /api/users/login

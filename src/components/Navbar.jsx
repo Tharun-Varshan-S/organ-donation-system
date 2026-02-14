@@ -24,6 +24,14 @@ const Navbar = ({ showPortalButton = false, onPortalClick, user, onLogout }) => 
           </button>
           <div className="hidden md:flex space-x-8">
             <NavLink
+              to="/"
+              className={({ isActive }) =>
+                `transition font-medium ${isActive ? 'text-red-400' : 'text-white hover:text-red-600'}`
+              }
+            >
+              Home
+            </NavLink>
+            <NavLink
               to="/mission"
               className={({ isActive }) =>
                 `transition font-medium ${isActive ? 'text-red-400' : 'text-white hover:text-red-600'}`
@@ -37,7 +45,7 @@ const Navbar = ({ showPortalButton = false, onPortalClick, user, onLogout }) => 
                 `transition font-medium ${isActive ? 'text-red-400' : 'text-white hover:text-red-600'}`
               }
             >
-              About
+              About Us
             </NavLink>
             <NavLink
               to="/contact"
@@ -45,7 +53,7 @@ const Navbar = ({ showPortalButton = false, onPortalClick, user, onLogout }) => 
                 `transition font-medium ${isActive ? 'text-red-400' : 'text-white hover:text-red-600'}`
               }
             >
-              Contact
+              Contact Us
             </NavLink>
           </div>
           <div className="flex items-center space-x-4">

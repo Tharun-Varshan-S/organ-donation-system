@@ -11,6 +11,8 @@ import Application from '../models/Application.js';
 import Consent from '../models/Consent.js';
 import User from '../models/User.js';
 import { ErrorResponse, asyncHandler } from '../middleware/error.js';
+import { sendDonorApplicationMail, sendDonorSelectionMail, sendOperationScheduledMail } from '../utils/emailHelper.js';
+
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -1432,7 +1434,19 @@ const createOperationRecord = asyncHandler(async (req, res) => {
     details: `Scheduled surgery for transplant ${transplant.transplantId}`
   });
 
+  // Background email sending
+  // We should notify the donor. For recipient, it depends on if they have an email.
+  // The donor is donorId.
+  const donor = await Donor.findById(donorId) || await User.findById(donorId);
+  const donorEmail = donor?.email || donor?.personalInfo?.email;
+  const donorName = donor?.name || `${donor?.personalInfo?.firstName} ${donor?.personalInfo?.lastName}`;
+
+  if (donorEmail) {
+    sendOperationScheduledMail(donorEmail, donorName, request.organType, surgeryDate, req.hospital.name, operatingRoom).catch(console.error);
+  }
+
   res.status(201).json({
+
     success: true,
     data: transplant
   });
@@ -1556,7 +1570,16 @@ const updateApplicationStatus = asyncHandler(async (req, res) => {
       }
     });
 
+    // Background email sending
+    const donorObj = application.user || application.donor;
+    const donorEmail = donorObj.email || donorObj.personalInfo?.email;
+    const donorName = donorObj.name || `${donorObj.personalInfo?.firstName} ${donorObj.personalInfo?.lastName}`;
+    if (donorEmail) {
+      sendDonorSelectionMail(donorEmail, donorName, request.organType, req.hospital.name).catch(console.error);
+    }
+
     // Audit Log
+
     await AuditLog.create({
       actionType: 'MATCH',
       performedBy: { id: req.hospital.id, name: req.hospital.name, role: 'Hospital' },
@@ -1646,6 +1669,13 @@ const applyToRequest = asyncHandler(async (req, res) => {
     }
   });
 
+  // Background email sending
+  const donorName = req.user?.name || `${req.donor?.personalInfo?.firstName} ${req.donor?.personalInfo?.lastName}`;
+  const donorEmail = req.user?.email || req.donor?.personalInfo?.email;
+  if (donorEmail) {
+    sendDonorApplicationMail(donorEmail, donorName, request.organType).catch(console.error);
+  }
+
   // Notify Hospital
   await Notification.create({
     recipient: request.hospital,
@@ -1659,10 +1689,12 @@ const applyToRequest = asyncHandler(async (req, res) => {
   });
 
   res.status(201).json({
+
     success: true,
     data: application
   });
 });
+
 
 // @desc    Update Transplant Status
 // @route   PUT /api/hospital/transplants/:id
