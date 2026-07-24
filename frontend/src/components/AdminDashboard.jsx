@@ -518,7 +518,7 @@ const OrganRequestsSection = ({ requestData, setCurrentPage, loading, navigate, 
                     <div>
                       <h3 className="font-black text-[#1e293b] text-xl uppercase tracking-tighter">{request.organType}</h3>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] font-black text-[#94a3b8] px-2 py-0.5 bg-gray-100 rounded">#REQ-{request._id.slice(-6).toUpperCase()}</span>
+                        <span className="text-[10px] font-black text-[#94a3b8] px-2 py-0.5 bg-gray-100 rounded">#REQ-{String(request._id).slice(-6).toUpperCase()}</span>
                         <div className={`w-2 h-2 rounded-full animate-pulse ${request.status === 'completed' ? 'bg-green-500' : 'bg-red-500'}`}></div>
                       </div>
                     </div>
@@ -610,7 +610,7 @@ const TransplantsSection = ({ transplantData, loading }) => (
           ) : (
             transplantData.length > 0 ? transplantData.map(t => (
               <tr key={t._id} className="hover:bg-gray-50/50 transition-colors border-b border-gray-50 last:border-0 group">
-                <td className="py-5 pl-8 font-mono text-xs font-bold text-[#64748b]">#{t.transplantId || t._id.slice(-6).toUpperCase()}</td>
+                <td className="py-5 pl-8 font-mono text-xs font-bold text-[#64748b]">#{t.transplantId || String(t._id).slice(-6).toUpperCase()}</td>
                 <td className="py-5">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-blue-500"></div>

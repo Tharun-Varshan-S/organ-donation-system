@@ -12,6 +12,15 @@ import mongoSanitize from 'express-mongo-sanitize';
 import xss from 'xss-clean';
 import hpp from 'hpp';
 import sanitizeResponse from './middleware/sanitizeResponse.js';
+import LogLens from 'loglens-sdk';
+
+// Initialize LogLens SDK
+LogLens.init({
+  apiKey: "ll_live_6foJsX06sXQlmcuUim18DWWkhB48VkHf0_e4OVWo3MA",
+  endpoint: "http://localhost:5000",
+  service: "Organ Donation System",
+  debug: true
+});
 
 // Route imports
 import authRoutes from './routes/auth.js';
