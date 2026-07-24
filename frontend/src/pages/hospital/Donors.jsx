@@ -54,8 +54,8 @@ const Donors = () => {
             setLoading(true);
             const token = localStorage.getItem('token');
             const url = discoveryMode
-                ? 'http://localhost:5000/api/hospital/donors/discovery'
-                : 'http://localhost:5000/api/hospital/donors';
+                ? 'http://localhost:5001/api/hospital/donors/discovery'
+                : 'http://localhost:5001/api/hospital/donors';
 
             const response = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -122,8 +122,8 @@ const Donors = () => {
             };
 
             const url = currentDonor
-                ? `http://localhost:5000/api/hospital/donors/${currentDonor._id}`
-                : 'http://localhost:5000/api/hospital/donors';
+                ? `http://localhost:5001/api/hospital/donors/${currentDonor._id}`
+                : 'http://localhost:5001/api/hospital/donors';
 
             const method = currentDonor ? 'PUT' : 'POST';
 
@@ -208,7 +208,7 @@ const Donors = () => {
     const fetchDonorTimeline = async (donorId) => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/api/hospital/donors/${donorId}/timeline`, {
+            const response = await fetch(`http://localhost:5001/api/hospital/donors/${donorId}/timeline`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();

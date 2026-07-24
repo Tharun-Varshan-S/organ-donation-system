@@ -38,7 +38,7 @@ const Doctors = () => {
     const fetchTransplants = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/api/hospital/transplants', {
+            const response = await fetch('http://localhost:5001/api/hospital/transplants', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
@@ -123,7 +123,7 @@ const Doctors = () => {
                 if (tx.surgeryDetails?.surgeonName === doctorName) {
                     try {
                         const token = localStorage.getItem('token');
-                        await fetch(`http://localhost:5000/api/hospital/transplants/${tx._id}`, {
+                        await fetch(`http://localhost:5001/api/hospital/transplants/${tx._id}`, {
                             method: 'PUT',
                             headers: {
                                 'Content-Type': 'application/json',

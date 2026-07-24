@@ -22,7 +22,7 @@ const HospitalDetailView = ({ hospitalId, onClose }) => {
         try {
             setLoading(true);
             const token = localStorage.getItem('adminToken');
-            const response = await fetch(`http://localhost:5000/api/admin/hospitals/${hospitalId}`, {
+            const response = await fetch(`http://localhost:5001/api/admin/hospitals/${hospitalId}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'

@@ -16,7 +16,7 @@ const Profile = () => {
     const fetchDashboardStats = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/api/hospital/dashboard', {
+            const response = await fetch('http://localhost:5001/api/hospital/dashboard', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
@@ -53,7 +53,7 @@ const Profile = () => {
     const fetchProfile = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/api/hospital/profile', {
+            const response = await fetch('http://localhost:5001/api/hospital/profile', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
@@ -96,7 +96,7 @@ const Profile = () => {
                 totalBeds: formData.capacity?.totalBeds
             };
 
-            const response = await fetch('http://localhost:5000/api/hospital/profile', {
+            const response = await fetch('http://localhost:5001/api/hospital/profile', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

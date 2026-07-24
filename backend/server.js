@@ -51,6 +51,37 @@ await connectDB();
 
 const app = express();
 
+// Express HTTP Request & Response Logging Middleware for LogLens SDK
+app.use((req, res, next) => {
+  const startTime = Date.now();
+
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    const statusCode = res.statusCode;
+    const logMsg = `HTTP ${req.method} ${req.originalUrl || req.url} ${statusCode} - ${duration}ms`;
+
+    if (statusCode >= 400) {
+      console.error(logMsg, {
+        method: req.method,
+        url: req.originalUrl || req.url,
+        statusCode: statusCode,
+        durationMs: duration,
+        ip: req.ip,
+        userAgent: req.get('user-agent')
+      });
+    } else {
+      console.log(logMsg, {
+        method: req.method,
+        url: req.originalUrl || req.url,
+        statusCode: statusCode,
+        durationMs: duration
+      });
+    }
+  });
+
+  next();
+});
+
 // Global Middleware
 app.use(helmet());
 app.use(mongoSanitize());
@@ -70,12 +101,6 @@ app.use(express.urlencoded({ extended: true }));
 
 // Sanitize Response Middleware
 app.use(sanitizeResponse);
-
-// Logging Middleware
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  next();
-});
 
 // Rate limiting
 const limiter = rateLimit({

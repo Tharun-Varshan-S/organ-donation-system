@@ -52,10 +52,10 @@ const Patients = () => {
         try {
             const token = localStorage.getItem('token');
             const [requestsRes, transplantsRes] = await Promise.all([
-                fetch('http://localhost:5000/api/hospital/requests', {
+                fetch('http://localhost:5001/api/hospital/requests', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 }),
-                fetch('http://localhost:5000/api/hospital/transplants', {
+                fetch('http://localhost:5001/api/hospital/transplants', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
             ]);
@@ -152,7 +152,7 @@ const Patients = () => {
         // Create organ request with patient data
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/api/hospital/requests', {
+            const response = await fetch('http://localhost:5001/api/hospital/requests', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

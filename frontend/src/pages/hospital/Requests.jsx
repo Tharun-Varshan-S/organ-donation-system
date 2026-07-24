@@ -56,7 +56,7 @@ const Requests = () => {
     const fetchRequests = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/api/hospital/requests', {
+            const response = await fetch('http://localhost:5001/api/hospital/requests', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
@@ -110,7 +110,7 @@ const Requests = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/api/hospital/requests/${currentRequestForDelay._id}/sla-breach`, {
+            const response = await fetch(`http://localhost:5001/api/hospital/requests/${currentRequestForDelay._id}/sla-breach`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -134,7 +134,7 @@ const Requests = () => {
     const handleValidateEligibility = async (requestId) => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/api/hospital/requests/${requestId}/validate-eligibility`, {
+            const response = await fetch(`http://localhost:5001/api/hospital/requests/${requestId}/validate-eligibility`, {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -153,7 +153,7 @@ const Requests = () => {
     const handleRevealDonor = async (donorId) => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/api/hospital/donors/${donorId}/profile`, {
+            const response = await fetch(`http://localhost:5001/api/hospital/donors/${donorId}/profile`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
@@ -186,7 +186,7 @@ const Requests = () => {
                 notes: formData.notes
             };
 
-            const response = await fetch('http://localhost:5000/api/hospital/requests', {
+            const response = await fetch('http://localhost:5001/api/hospital/requests', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
